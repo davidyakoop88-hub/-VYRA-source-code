@@ -20,9 +20,10 @@ bind = function () {
   const picker = document.querySelector('.pro-frame-picker');
   if (!widget || !picker) return;
 
-  if (!vyraPremiumProfileFrames.some(([id]) => id === widget.profileFrame)) {
-    widget.profileFrame = 'none';
-  }
+  // NOTE: the validity-reset that used to live here (forcing profileFrame back to 'none' whenever
+  // it wasn't one of this file's 10 names) was removed — toplike-studio.js's frame library (32+ names)
+  // is now the authoritative list and always re-renders this picker right after this function runs,
+  // so this file's own markup below is just an intermediate step that gets immediately overwritten.
 
   picker.innerHTML = `
     <span>VYRA SIGNATURE-RAMAR</span>

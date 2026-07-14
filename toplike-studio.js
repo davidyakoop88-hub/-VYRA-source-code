@@ -5,6 +5,37 @@
     ['fire', 'Fire'], ['sakura', 'Sakura'], ['cyber', 'Cyber'], ['luxury', 'Luxury']
   ];
 
+  // Avatar Frame library — real illustrated PNGs where a matching asset already exists in the repo
+  // (reused across names/genders where thematically close), plain SVG placeholder rings elsewhere
+  // (same "swap file-for-file, no code change" idea as this project's own DEV PLACEHOLDER themes —
+  // see README.md). Placeholder ids are exactly the ones with ext:'svg'.
+  const FRAMES = {
+    boys: [
+      ['classic-gold', 'Classic Gold', 'golden-king', 'png'], ['silver-steel', 'Silver Steel', 'silver', 'png'],
+      ['bronze', 'Bronze', 'bronze', 'png'], ['diamond', 'Diamond', 'aurora-diamond', 'png'],
+      ['royal-crown', 'Royal Crown', 'champagne-crown', 'png'], ['heroic', 'Heroic', 'heroic', 'svg'],
+      ['flame', 'Flame', 'flame', 'svg'], ['ice', 'Ice', 'ice-crystal', 'png'],
+      ['neon-blue', 'Neon Blue', 'neon-blue', 'svg'], ['neon-purple', 'Neon Purple', 'neon-purple', 'png'],
+      ['neon-green', 'Neon Green', 'neon-green', 'svg'], ['cyber', 'Cyber', 'cyber-blue', 'png'],
+      ['galaxy', 'Galaxy', 'galaxy', 'png'], ['lightning', 'Lightning', 'lightning', 'svg'],
+      ['dragon', 'Dragon', 'emerald', 'png'], ['samurai', 'Samurai', 'samurai', 'png'],
+      ['wings', 'Wings', 'wings', 'svg'], ['infinity', 'Infinity', 'infinity', 'svg'],
+      ['viking', 'Viking', 'viking', 'svg'], ['predator', 'Predator', 'predator', 'svg']
+    ],
+    girls: [
+      ['pink-heart', 'Pink Heart', 'pink-angel', 'png'], ['rose-gold', 'Rose Gold', 'rose-atelier', 'png'],
+      ['butterfly', 'Butterfly', 'butterfly', 'svg'], ['flower', 'Flower', 'flower', 'svg'],
+      ['crystal', 'Crystal', 'sapphire-nocturne', 'png'], ['pearl', 'Pearl', 'pearl-lumiere', 'png'],
+      ['fairy', 'Fairy', 'fairy', 'svg'], ['unicorn', 'Unicorn', 'unicorn', 'svg'],
+      ['starry', 'Starry', 'starry', 'svg'], ['magic', 'Magic', 'midnight-amethyst', 'png'],
+      ['love', 'Love', 'ruby-velvet', 'png'], ['princess', 'Princess', 'princess', 'svg'],
+      ['neon-pink', 'Neon Pink', 'neon-pink', 'svg'], ['neon-purple', 'Neon Purple', 'neon-purple', 'png'],
+      ['neon-blue', 'Neon Blue', 'neon-blue', 'svg'], ['sparkle', 'Sparkle', 'sparkle', 'svg']
+    ]
+  };
+  const FRAME_FILES = {}; // id -> "file.ext", built once from FRAMES so wh() can look up the real filename
+  Object.values(FRAMES).flat().forEach(([id, , file, ext]) => { FRAME_FILES[id] = `${file}.${ext}`; });
+
   // ---- Render: skin class, entrance-animation class, opacity, crown on #1 ----
   const wsRenderWh = wh;
   wh = function (w) {
@@ -26,6 +57,13 @@
           (match, prefix, img) => `${prefix}<span class="pro-avatar-frame medal-${name}">${img}<img class="pro-frame-art" src="assets/images/medals/${name}.png" alt=""></span>`
         );
       });
+    }
+
+    // proTopLikeFrameWh (media.js) always builds the src as assets/images/profile-frames/{id}.png?v=2 —
+    // fix it up to the real filename (FRAME_FILES) for frames whose asset is a differently-named PNG
+    // reuse or an .svg placeholder, without touching that existing chain.
+    if (w.profileFrame && w.profileFrame !== 'none' && FRAME_FILES[w.profileFrame]) {
+      html = html.replaceAll(`assets/images/profile-frames/${w.profileFrame}.png?v=2`, `assets/images/profile-frames/${FRAME_FILES[w.profileFrame]}`);
     }
     return html;
   };
@@ -108,6 +146,41 @@
     const activeTab = w.wsActiveTab || 'content';
     nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.wsTab === activeTab));
     applyTab();
+  };
+
+  // ---- Full Avatar Frame library (32 names, Killar/Tjejer tabs) — replaces whatever the existing
+  // proTopLikeFrameBind/premiumProfileFramesBind last wrote into .pro-frame-picker, same "last loaded
+  // wins" pattern those two already use against each other. ----
+  const wsFramesBind = bind;
+  bind = function () {
+    wsFramesBind();
+    if (view !== 'editor') return;
+    const w = state.widgets.find(x => x.id === selected);
+    const picker = document.querySelector('.pro-frame-picker');
+    if (!w || !RANKING_TYPES.includes(w.type) || !picker) return;
+
+    const gender = w.frameGenderTab === 'girls' ? 'girls' : 'boys';
+    const current = w.profileFrame || 'none';
+    const swatch = ([id, name, file, ext]) => `<button type="button" data-ws-frame="${id}" class="ws-frame-swatch${current === id ? ' active' : ''}${ext === 'svg' ? ' placeholder' : ''}"><img src="assets/images/profile-frames/${file}.${ext}" alt=""><b>${name}</b>${ext === 'svg' ? '<small>platshållare</small>' : ''}</button>`;
+
+    picker.innerHTML = `
+      <span>AVATAR-RAMAR · VÄLJ RAM</span>
+      <div class="ws-frame-gender-tabs">
+        <button type="button" data-ws-gender="boys" class="${gender === 'boys' ? 'active' : ''}">Killar</button>
+        <button type="button" data-ws-gender="girls" class="${gender === 'girls' ? 'active' : ''}">Tjejer</button>
+      </div>
+      <div class="ws-frame-grid">
+        <button type="button" data-ws-frame="none" class="ws-frame-swatch${current === 'none' ? ' active' : ''}"><i>×</i><b>Ingen</b></button>
+        ${FRAMES[gender].map(swatch).join('')}
+      </div>
+      <select id="proTopLikeFrame" aria-label="Profilram"><option value="none">Ingen</option>${Object.values(FRAMES).flat().map(([id, name]) => `<option value="${id}">${name}</option>`).join('')}</select>`;
+
+    picker.querySelector('select').value = current;
+    picker.querySelectorAll('[data-ws-gender]').forEach(btn => btn.onclick = () => { w.frameGenderTab = btn.dataset.wsGender; render(); });
+    picker.querySelectorAll('[data-ws-frame]').forEach(btn => btn.onclick = () => {
+      w.profileFrame = btn.dataset.wsFrame; save(); render();
+      toast(btn.dataset.wsFrame === 'none' ? 'Profilram borttagen' : `${btn.querySelector('b').textContent} vald`);
+    });
   };
 
   // ---- Bottom toolbar: Resolution selector + Export Overlay button, appended to the existing overlay-link-bar ----
