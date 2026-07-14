@@ -1,0 +1,19 @@
+$root=[IO.Path]::GetFullPath($PSScriptRoot)
+$listener=[Net.HttpListener]::new();$listener.Prefixes.Add('http://127.0.0.1:4173/');$listener.Prefixes.Add('http://localhost:4173/');$listener.Start()
+$events=[Collections.Generic.List[object]]::new();$connection=[ordered]@{connected=$false;username='';mode='demo';updated=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()}
+$types=@{'.html'='text/html; charset=utf-8';'.css'='text/css; charset=utf-8';'.js'='text/javascript; charset=utf-8';'.json'='application/json; charset=utf-8';'.png'='image/png';'.jpg'='image/jpeg';'.jpeg'='image/jpeg';'.mp4'='video/mp4';'.svg'='image/svg+xml';'.webp'='image/webp';'.woff2'='font/woff2'}
+function Send-Bytes($r,[byte[]]$b,[string]$t='application/json; charset=utf-8',[int]$s=200){$r.StatusCode=$s;$r.ContentType=$t;$r.ContentLength64=$b.Length;$r.AddHeader('Cache-Control','no-store');$r.OutputStream.Write($b,0,$b.Length);$r.Close()}
+function Send-Json($r,$v,[int]$s=200){Send-Bytes $r ([Text.Encoding]::UTF8.GetBytes(($v|ConvertTo-Json -Depth 12 -Compress))) 'application/json; charset=utf-8' $s}
+function Read-Json($q){$rd=[IO.StreamReader]::new($q.InputStream,$q.ContentEncoding);$raw=$rd.ReadToEnd();$rd.Close();if(!$raw){return @{}};return($raw|ConvertFrom-Json)}
+Write-Host '';Write-Host 'VYRA Live Server ar igang' -ForegroundColor Magenta;Write-Host 'Studio:  http://127.0.0.1:4173/studio.html';Write-Host 'Overlay: http://127.0.0.1:4173/overlay.html';Write-Host 'Stoppa med Ctrl+C'
+try{while($listener.IsListening){$c=$listener.GetContext();$q=$c.Request;$r=$c.Response;$p=$q.Url.AbsolutePath
+ try{
+  if($p -eq '/api/status'){Send-Json $r ([ordered]@{ok=$true;server='VYRA Live Server';connection=$connection;lastEventId=if($events.Count){$events[$events.Count-1].id}else{0}});continue}
+  if($p -eq '/api/connect' -and $q.HttpMethod -eq 'POST'){$d=Read-Json $q;$connection.connected=$true;$connection.username=[string]$d.username;$connection.mode='connector-ready';$connection.updated=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();Send-Json $r @{ok=$true;connection=$connection;message='Redo for LIVE-events'};continue}
+  if($p -eq '/api/disconnect' -and $q.HttpMethod -eq 'POST'){$connection.connected=$false;$connection.updated=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();Send-Json $r @{ok=$true;connection=$connection};continue}
+  if($p -eq '/api/events' -and $q.HttpMethod -eq 'GET'){$after=0;[void][long]::TryParse($q.QueryString['after'],[ref]$after);Send-Json $r @{ok=$true;events=@($events|Where-Object{$_.id -gt $after})};continue}
+  if($p -eq '/api/events' -and $q.HttpMethod -eq 'POST'){$d=Read-Json $q;$id=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();while($events.Count -and $events[$events.Count-1].id -ge $id){$id++};$e=[ordered]@{id=$id;type=[string]$d.type;username=[string]$d.username;name=[string]$d.name;profileImage=[string]$d.profileImage;giftName=[string]$d.giftName;giftImage=[string]$d.giftImage;coins=$d.coins;count=$d.count;multiplier=$d.multiplier;points=$d.points;level=$d.level;timestamp=$id};$events.Add($e);while($events.Count -gt 250){$events.RemoveAt(0)};Send-Json $r @{ok=$true;event=$e};continue}
+  if($q.HttpMethod -ne 'GET'){Send-Json $r @{ok=$false;error='Method not allowed'} 405;continue}
+  $rel=[Uri]::UnescapeDataString($p).TrimStart('/');if(!$rel){$rel='index.html'};$file=[IO.Path]::GetFullPath((Join-Path $root $rel));if(!$file.StartsWith($root,[StringComparison]::OrdinalIgnoreCase) -or !(Test-Path -LiteralPath $file -PathType Leaf)){Send-Json $r @{ok=$false;error='Hittades inte'} 404;continue};$body=[IO.File]::ReadAllBytes($file);$ext=[IO.Path]::GetExtension($file).ToLowerInvariant();$type=if($types.ContainsKey($ext)){$types[$ext]}else{'application/octet-stream'};Send-Bytes $r $body $type
+ }catch{try{Send-Json $r @{ok=$false;error=$_.Exception.Message} 500}catch{}}
+}}finally{$listener.Stop();$listener.Close()}

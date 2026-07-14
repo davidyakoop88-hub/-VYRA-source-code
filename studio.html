@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VYRA Studio</title>
+  <link rel="stylesheet" href="studio.css?v=20260714-5">
+</head>
+<body>
+  <aside>
+    <a href="index.html" class="brand"><i>V</i><b>VYRA</b></a>
+    <nav>
+      <button class="active" data-view="home">⌂ <span>Översikt</span></button>
+      <button data-view="editor">◫ <span>Overlay Studio</span></button>
+      <button data-view="flows">⌁ <span>Automationer</span></button>
+      <button data-view="events">◇ <span>Events</span></button>
+      <button data-extra="actions">⚡ <span>Action &amp; Event</span></button>
+      <button data-extra="chatbot">▢ <span>Chatbot</span></button>
+      <button data-extra="spotify">♫ <span>Spotify</span></button>
+      <button data-extra="members">◎ <span>Medlemmar</span></button>
+      <button data-view="analytics">⌗ <span>Analytics</span></button>
+    </nav>
+    <div class="aside-bottom">
+      <button data-view="settings">⚙ <span>Inställningar</span></button>
+      <div class="user"><i>AV</i><span><b id="userName">Streamer</b><small>Pro trial · 7 dagar</small></span></div>
+    </div>
+  </aside>
+  <main>
+    <header>
+      <div><small id="crumb">VYRA / ÖVERSIKT</small><h1 id="title">God kväll, Streamer</h1></div>
+      <div class="head-actions">
+        <div class="connection"><i></i><span>Demoläge</span></div>
+        <button id="openOverlay">Overlay ↗</button>
+        <button class="connect">Anslut TikTok</button>
+      </div>
+    </header>
+    <section id="view"></section>
+  </main>
+  <dialog id="connectModal">
+    <button class="x">×</button><i class="tiktok">♪</i>
+    <h2>Anslut TikTok LIVE</h2>
+    <p>Skriv användarnamnet som du använder när du går live.</p>
+    <label>Användarnamn<input id="tikUser" placeholder="@dittnamn"></label>
+    <button class="primary" id="connectNow">Anslut konto</button>
+    <small>Anslutningen körs i demoläge lokalt.</small>
+  </dialog>
+  <div class="toast"></div>
+  <script src="studio.js?v=20260714-3"></script>
+  <script src="extras.js?v=20260714-3"></script>
+  <script src="assets/gifts/gifts-manifest.js"></script>
+  <script src="media.js?v=20260714-11"></script>
+</body>
+</html>
