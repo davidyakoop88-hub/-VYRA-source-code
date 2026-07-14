@@ -92,6 +92,11 @@
 .vyra-toplike.skin-luxury .toplike-row>b{background:linear-gradient(135deg,#c79bff,#e8c25a)!important;color:#150a1f!important}
 .vyra-toplike.skin-luxury .toplike-row em{color:#e8d4ff!important}
 
+/* ---- Automatic gold/silver/bronze medal ring for #1/#2/#3 ----
+   Reuses the existing .pro-avatar-frame/.pro-frame-art structure and its grid/sizing CSS
+   (studio.css) instead of inventing a new wrapper — that's the only combination the
+   .toplike-row:has(>.pro-avatar-frame) grid override already accounts for. */
+
 /* ---- Crown on rank #1 ---- */
 .toplike-row.rank-1{position:relative}
 .toplike-crown{position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-size:13px;font-style:normal;color:#ffd76a;text-shadow:0 0 8px #ffb02580;pointer-events:none;z-index:6}

@@ -15,6 +15,18 @@
     html = html.replace('class="widget vyra-toplike', `class="widget vyra-toplike skin-${skin}${anim}`);
     html = html.replace('style="', `style="opacity:${w.opacity ?? 1};`);
     if (w.showCrown !== false) html = html.replace('rank-1"><b>1</b>', 'rank-1"><i class="toplike-crown">♛</i><b>1</b>');
+
+    // Automatic gold/silver/bronze medal ring for #1/#2/#3 — only when no custom Avatar Frame is chosen,
+    // so the explicit frame picker (proTopLikeFrameBind/premiumProfileFramesBind) still wins when used.
+    if (w.autoMedal !== false && (!w.profileFrame || w.profileFrame === 'none')) {
+      const medals = [['1', 'gold'], ['2', 'silver'], ['3', 'bronze']];
+      medals.forEach(([rank, name]) => {
+        html = html.replace(
+          new RegExp(`(rank-${rank}">(?:<i class="toplike-crown">[^<]*<\\/i>)?<b>${rank}<\\/b>)(<img[^>]*>)`),
+          (match, prefix, img) => `${prefix}<span class="pro-avatar-frame medal-${name}">${img}<img class="pro-frame-art" src="assets/images/medals/${name}.png" alt=""></span>`
+        );
+      });
+    }
     return html;
   };
 
@@ -27,7 +39,7 @@
 
     let out = html.replace(
       /(<input id="likeShowTitle"[^>]*>\s*Rubrik<\/label>)(<\/div>)/,
-      `$1<label><input id="wsShowCrown" type="checkbox" ${w.showCrown === false ? '' : 'checked'}> Krona</label>$2`
+      `$1<label><input id="wsShowCrown" type="checkbox" ${w.showCrown === false ? '' : 'checked'}> Krona</label><label><input id="wsAutoMedal" type="checkbox" ${w.autoMedal === false ? '' : 'checked'}> Medaljring #1-3</label>$2`
     );
 
     const skin = w.skin || 'royal-gold';
@@ -48,6 +60,9 @@
 
     const crown = document.querySelector('#wsShowCrown');
     if (crown) crown.onchange = e => { w.showCrown = e.target.checked; save(); render(); };
+
+    const autoMedal = document.querySelector('#wsAutoMedal');
+    if (autoMedal) autoMedal.onchange = e => { w.autoMedal = e.target.checked; save(); render(); };
 
     document.querySelectorAll('[data-ws-skin]').forEach(btn => {
       btn.onclick = () => { w.skin = btn.dataset.wsSkin; save(); render(); };
