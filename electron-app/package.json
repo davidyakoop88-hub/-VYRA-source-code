@@ -17,8 +17,8 @@
     "productName": "VYRA",
     "asar": true,
     "directories": { "output": "dist2" },
-    "files": ["main.js", "local-server.js", "splash.html"],
-    "win": { "target": "nsis" },
+    "files": ["main.js", "local-server.js", "splash.html", "icon.ico"],
+    "win": { "target": "nsis", "icon": "icon.ico" },
     "nsis": {
       "artifactName": "VYRA-Setup.exe",
       "oneClick": false,
@@ -26,7 +26,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "VYRA"
+      "shortcutName": "VYRA",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico"
     },
     "extraResources": [
       {

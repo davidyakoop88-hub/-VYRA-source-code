@@ -29,11 +29,13 @@ function appRoot() {
   return app.isPackaged ? path.join(process.resourcesPath, 'app') : path.join(__dirname, '..');
 }
 
+const iconPath = path.join(__dirname, 'icon.ico');
+
 function createSplash() {
   log('createSplash()');
   splash = new BrowserWindow({
     width: 520, height: 340, frame: false, resizable: false, movable: true,
-    center: true, show: true, backgroundColor: '#0a0611',
+    center: true, show: true, backgroundColor: '#0a0611', icon: iconPath,
     webPreferences: { contextIsolation: true }
   });
   splash.loadFile(path.join(__dirname, 'splash.html'));
@@ -46,7 +48,7 @@ function createMainWindow() {
   log('createMainWindow()');
   main = new BrowserWindow({
     width: 1360, height: 860, minWidth: 1000, minHeight: 680,
-    show: false, backgroundColor: '#08090d', autoHideMenuBar: true,
+    show: false, backgroundColor: '#08090d', autoHideMenuBar: true, icon: iconPath,
     webPreferences: { contextIsolation: true }
   });
   Menu.setApplicationMenu(null);
