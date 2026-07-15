@@ -210,7 +210,15 @@
       toast('Overlay exporterad');
     };
 
-    bar.append(resolution, exportButton);
+    const liveDataLabel = document.createElement('label');
+    liveDataLabel.className = 'ws-live-data';
+    liveDataLabel.innerHTML = `<input type="checkbox" ${window.VyraLeaderboard?.isLiveData() ? 'checked' : ''}> Live-data i topplistor`;
+    liveDataLabel.querySelector('input').onchange = e => {
+      window.VyraLeaderboard?.setLiveData(e.target.checked);
+      toast(e.target.checked ? 'Topplistor visar nu riktig aktivitet' : 'Topplistor visar demodata igen');
+    };
+
+    bar.append(resolution, exportButton, liveDataLabel);
   };
 
   // Overlay pages auto-render on a setTimeout(0) right after page load (see media.js), which can race
