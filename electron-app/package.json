@@ -1,0 +1,57 @@
+{
+  "name": "vyra-desktop",
+  "version": "1.0.0",
+  "description": "VYRA — TikTok LIVE overlay studio, desktop app",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.vyra.desktop",
+    "productName": "VYRA",
+    "asar": true,
+    "directories": { "output": "dist" },
+    "files": ["main.js", "splash.html"],
+    "win": { "target": "portable" },
+    "portable": { "artifactName": "VYRA-Setup.exe" },
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "app",
+        "filter": [
+          "**/*",
+          "!electron-app",
+          "!electron-app/**",
+          "!.git",
+          "!.git/**",
+          "!.tools",
+          "!.tools/**",
+          "!.claude",
+          "!.claude/**",
+          "!node_modules",
+          "!node_modules/**",
+          "!tiktok-bridge/node_modules",
+          "!tiktok-bridge/node_modules/**",
+          "!VYRA-Setup.exe",
+          "!VYRA-Download.zip",
+          "!vyra-payload.zip",
+          "!vyra-state-backup.json",
+          "!.download-staging",
+          "!.download-staging/**",
+          "!reference-review.html",
+          "!pink-princess-alpha-check.html",
+          "!gift-counter-overlay-original.html",
+          "!CLAUDE-HANDOFF.md",
+          "!CLAUDE.md",
+          "!.gitignore"
+        ]
+      }
+    ]
+  }
+}
