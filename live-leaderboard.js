@@ -1,15 +1,15 @@
 (function () {
   // Aggregates real per-user totals (likes, gift coins) from the live event stream so the Top Like /
   // Top Coins / Top Points widgets can show real activity instead of the hardcoded demo names in
-  // media.js's topLikePeople array. Opt-in via a "Live-data" toggle (default off, so the existing demo
-  // experience is unaffected) — persisted in localStorage so it survives reloads.
+  // media.js's topLikePeople array. Opt-in and independent PER WIDGET (w.useLiveData / w.liveMetric,
+  // set via toplike-studio.js's Content-tab controls) — two widgets of the same type can independently
+  // show demo data and real data side by side, or rank by a different metric.
   //
   // Applies via a DOM-patching interval (same technique media.js's own updateRankingCycles already
   // uses for its cycle feature) rather than mutating topLikePeople + calling render(), so it never
   // disrupts whatever the user is doing in the editor (selection, scroll, open panels).
 
   const totals = {}; // username -> {name, profileImage, likes, coins}
-  let liveDataEnabled = localStorage.getItem('vyra-leaderboard-live') === '1';
 
   function formatNum(n) {
     if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -31,10 +31,12 @@
   }
 
   function updateLiveLeaderboards() {
-    if (!liveDataEnabled) return;
-    document.querySelectorAll('.vyra-toplike').forEach(el => {
+    if (typeof state === 'undefined' || !state?.widgets) return;
+    document.querySelectorAll('.vyra-toplike[data-id]').forEach(el => {
+      const w = state.widgets.find(x => x.id === el.dataset.id);
+      if (!w || !w.useLiveData) return;
       const rows = el.querySelectorAll('.toplike-row');
-      const metric = el.className.includes('vyra-templatetopcoins') ? 'coins' : 'likes';
+      const metric = w.liveMetric || (w.type === 'templateTopCoins' ? 'coins' : 'likes');
       const top = sortedTop(metric).slice(0, rows.length);
       if (!top.length) return;
       rows.forEach((row, i) => {
@@ -56,8 +58,6 @@
   setInterval(updateLiveLeaderboards, 1000);
 
   window.VyraLeaderboard = {
-    getTop: (metric = 'likes', count = 10) => sortedTop(metric).slice(0, count),
-    setLiveData(on) { liveDataEnabled = !!on; localStorage.setItem('vyra-leaderboard-live', on ? '1' : '0'); },
-    isLiveData: () => liveDataEnabled
+    getTop: (metric = 'likes', count = 10) => sortedTop(metric).slice(0, count)
   };
 })();

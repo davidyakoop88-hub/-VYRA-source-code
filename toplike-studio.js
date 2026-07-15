@@ -80,6 +80,12 @@
       `$1<label><input id="wsShowCrown" type="checkbox" ${w.showCrown === false ? '' : 'checked'}> Krona</label><label><input id="wsAutoMedal" type="checkbox" ${w.autoMedal === false ? '' : 'checked'}> Medaljring #1-3</label>$2`
     );
 
+    const liveMetric = w.liveMetric || (w.type === 'templateTopCoins' ? 'coins' : 'likes');
+    out = out.replace(
+      '<div class="property-group"><h4>DESIGN',
+      `<div class="property-group"><h4>LIVE-DATA</h4><label><input id="wsLiveData" type="checkbox" ${w.useLiveData ? 'checked' : ''}> Visa riktig aktivitet (inte demo-namn)</label><label>Rangordna efter<select id="wsLiveMetric" ${w.useLiveData ? '' : 'disabled'}><option value="likes"${liveMetric === 'likes' ? ' selected' : ''}>Likes</option><option value="coins"${liveMetric === 'coins' ? ' selected' : ''}>Gåv-coins</option></select></label></div><div class="property-group"><h4>DESIGN`
+    );
+
     const skin = w.skin || 'royal-gold';
     const skinGroup = `<div class="property-group"><h4>DESIGN · VÄLJ TEMA</h4><div class="toplike-skin-grid">${SKINS.map(([id, name]) => `<button type="button" data-ws-skin="${id}" class="toplike-skin-swatch skin-${id}${skin === id ? ' active' : ''}"><i></i><b>${name}</b></button>`).join('')}</div></div>`;
     const animGroup = `<div class="property-group"><h4>ANIMATION</h4><label>Inträdeseffekt<select id="wsEntrance"><option value="none">Ingen</option><option value="fade">Tona in</option><option value="slideUp">Glid upp</option><option value="pop">Poppa in</option></select></label><label class="range-label">Varaktighet <b>${w.entranceDuration || 600} ms</b><input id="wsEntranceDuration" type="range" min="150" max="1500" step="50" value="${w.entranceDuration || 600}"></label><label class="range-label">Opacitet <b>${Math.round((w.opacity ?? 1) * 100)}%</b><input id="wsOpacity" type="range" min="10" max="100" value="${Math.round((w.opacity ?? 1) * 100)}"></label></div>`;
@@ -101,6 +107,12 @@
 
     const autoMedal = document.querySelector('#wsAutoMedal');
     if (autoMedal) autoMedal.onchange = e => { w.autoMedal = e.target.checked; save(); render(); };
+
+    const liveData = document.querySelector('#wsLiveData');
+    if (liveData) liveData.onchange = e => { w.useLiveData = e.target.checked; save(); render(); toast(e.target.checked ? 'Visar riktig aktivitet' : 'Visar demodata'); };
+
+    const liveMetric = document.querySelector('#wsLiveMetric');
+    if (liveMetric) liveMetric.onchange = e => { w.liveMetric = e.target.value; save(); render(); };
 
     document.querySelectorAll('[data-ws-skin]').forEach(btn => {
       btn.onclick = () => { w.skin = btn.dataset.wsSkin; save(); render(); };
@@ -210,15 +222,7 @@
       toast('Overlay exporterad');
     };
 
-    const liveDataLabel = document.createElement('label');
-    liveDataLabel.className = 'ws-live-data';
-    liveDataLabel.innerHTML = `<input type="checkbox" ${window.VyraLeaderboard?.isLiveData() ? 'checked' : ''}> Live-data i topplistor`;
-    liveDataLabel.querySelector('input').onchange = e => {
-      window.VyraLeaderboard?.setLiveData(e.target.checked);
-      toast(e.target.checked ? 'Topplistor visar nu riktig aktivitet' : 'Topplistor visar demodata igen');
-    };
-
-    bar.append(resolution, exportButton, liveDataLabel);
+    bar.append(resolution, exportButton);
   };
 
   // Overlay pages auto-render on a setTimeout(0) right after page load (see media.js), which can race

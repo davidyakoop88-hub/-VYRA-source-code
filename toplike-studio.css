@@ -120,10 +120,8 @@
 .ws-anim-slideUp{animation:wsSlideUp .5s ease both}
 .ws-anim-pop{animation:wsPopIn .5s cubic-bezier(.2,.8,.3,1.2) both}
 
-/* ---- Overlay toolbar additions (Resolution + Export + Live-data, appended into the existing overlay-link-bar) ---- */
-.overlay-link-bar{grid-template-columns:minmax(220px,1fr) auto auto auto auto auto auto!important}
+/* ---- Overlay toolbar additions (Resolution + Export, appended into the existing overlay-link-bar) ---- */
+.overlay-link-bar{grid-template-columns:minmax(220px,1fr) auto auto auto auto auto!important}
 .overlay-link-bar select.ws-resolution{background:#141720;border:1px solid #272b36;color:#c9cbd2;border-radius:6px;padding:0 10px;font-size:8px;height:100%}
 .overlay-link-bar button.ws-export{background:var(--purple,#7c5cff)!important;border-color:var(--purple,#7c5cff)!important;color:#fff!important}
-.overlay-link-bar label.ws-live-data{display:flex!important;align-items:center;gap:6px;background:#141720;border:1px solid #272b36;border-radius:6px;padding:0 10px;font-size:8px;color:#c9cbd2;white-space:nowrap;cursor:pointer}
-.overlay-link-bar label.ws-live-data input{accent-color:#55d99c;width:12px;height:12px}
-@media(max-width:1350px){.overlay-link-bar select.ws-resolution,.overlay-link-bar label.ws-live-data{display:none!important}}
+@media(max-width:1200px){.overlay-link-bar select.ws-resolution{display:none}}
