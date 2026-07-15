@@ -15,9 +15,21 @@
 
   // Restore-on-load: only when local state looks empty, so a real (non-empty) session is never
   // silently overwritten by an older backup.
+  // A widget missing both title and type would render as literal "undefined" text through the
+  // base fallback renderer (see studio.js) — sanitize anything coming back from disk before it's
+  // allowed to reach the real layout, since this file can hold stale data from as far back as it
+  // was first created.
+  function sanitizeWidget(w) {
+    if (!w || typeof w !== 'object' || !w.id) return null;
+    if (!w.title) w.title = w.type || 'Widget';
+    return w;
+  }
+
   if (currentWidgetCount() === 0) {
     fetch('/api/state').then(r => r.ok ? r.json() : null).then(backup => {
       if (!backup || !Array.isArray(backup.widgets) || !backup.widgets.length) return;
+      backup.widgets = backup.widgets.map(sanitizeWidget).filter(Boolean);
+      if (!backup.widgets.length) return;
       localStorage.setItem('vyra-state', JSON.stringify(backup));
       if (typeof state === 'object' && state) {
         Object.assign(state, backup);
