@@ -20,11 +20,14 @@ VYRA är en lokal webbapp för TikTok Live/OBS med en overlay-studio, widgets, A
 - `profile-frames-premium.js`, `profile-frames-premium.css` – profilramar.
 - `overview-premium.js`, `overview-premium.css` – översiktens premiumutseende.
 - `live-client.js`, `studio-live.js` – live-/eventanslutning.
+- `tiktok-bridge/` – fristående Node.js-tjänst som ansluter till en riktig TikTok LIVE-sändning (via det oofficiella biblioteket `tiktok-live-connector`, eftersom TikTok inte har någon publik API för detta) och vidarebefordrar gåvor/följare/likes/chatt till `server.ps1`:s `/api/events`. Se `ANSLUT-TIKTOK-LIVE.cmd`.
 - `assets/` – bilder, teman, presenter och andra resurser.
 
 ## Starta lokalt
 
 På Windows kan `STARTA-HEMSIDAN.cmd` användas. Alternativt kan en lokal statisk server startas i projektmappen och `studio.html` öppnas. Projektet har senast använts på `http://127.0.0.1:4173/studio.html`.
+
+För en riktig TikTok LIVE-anslutning (inte demoläge): kör `ANSLUT-TIKTOK-LIVE.cmd <ditt-tiktok-anvandarnamn>` samtidigt som servern körs. Kräver Node.js — en portabel version finns i `.tools/` (inte i git) och är redan lagd till i PATH.
 
 Öppna inte bara `studio.html` via `file://` när funktioner behöver lokal lagring, media eller overlay-kommunikation.
 
