@@ -36,6 +36,13 @@
   const FRAME_FILES = {}; // id -> "file.ext", built once from FRAMES so wh() can look up the real filename
   Object.values(FRAMES).flat().forEach(([id, , file, ext]) => { FRAME_FILES[id] = `${file}.${ext}`; });
 
+  // Exposed so other widget families (gift-alert-frames.js) can reuse the same frame library and
+  // picker markup instead of duplicating the 36-entry table. Only read inside function bodies in
+  // consumers, never at their own top-level IIFE scope — script load order between dynamically
+  // injected files isn't guaranteed (see the overlay re-render guard at the end of this file).
+  window.VYRA_FRAMES = FRAMES;
+  window.VYRA_FRAME_FILES = FRAME_FILES;
+
   // ---- Render: skin class, entrance-animation class, opacity, crown on #1 ----
   const wsRenderWh = wh;
   wh = function (w) {
@@ -163,19 +170,13 @@
   // ---- Full Avatar Frame library (32 names, Killar/Tjejer tabs) — replaces whatever the existing
   // proTopLikeFrameBind/premiumProfileFramesBind last wrote into .pro-frame-picker, same "last loaded
   // wins" pattern those two already use against each other. ----
-  const wsFramesBind = bind;
-  bind = function () {
-    wsFramesBind();
-    if (view !== 'editor') return;
-    const w = state.widgets.find(x => x.id === selected);
-    const picker = document.querySelector('.pro-frame-picker');
-    if (!w || !RANKING_TYPES.includes(w.type) || !picker) return;
-
+  // Picker markup extracted into a standalone function (and exposed on window) so gift-alert-frames.js
+  // can mount the exact same picker for the gift/alert widget family without duplicating this table.
+  window.vyraBuildFramePicker = function (w) {
     const gender = w.frameGenderTab === 'girls' ? 'girls' : 'boys';
     const current = w.profileFrame || 'none';
     const swatch = ([id, name, file, ext]) => `<button type="button" data-ws-frame="${id}" class="ws-frame-swatch${current === id ? ' active' : ''}${ext === 'svg' ? ' placeholder' : ''}"><img src="assets/images/profile-frames/${file}.${ext}" alt=""><b>${name}</b>${ext === 'svg' ? '<small>platshållare</small>' : ''}</button>`;
-
-    picker.innerHTML = `
+    return `
       <span>AVATAR-RAMAR · VÄLJ RAM</span>
       <div class="ws-frame-gender-tabs">
         <button type="button" data-ws-gender="boys" class="${gender === 'boys' ? 'active' : ''}">Killar</button>
@@ -186,6 +187,18 @@
         ${FRAMES[gender].map(swatch).join('')}
       </div>
       <select id="proTopLikeFrame" aria-label="Profilram"><option value="none">Ingen</option>${Object.values(FRAMES).flat().map(([id, name]) => `<option value="${id}">${name}</option>`).join('')}</select>`;
+  };
+
+  const wsFramesBind = bind;
+  bind = function () {
+    wsFramesBind();
+    if (view !== 'editor') return;
+    const w = state.widgets.find(x => x.id === selected);
+    const picker = document.querySelector('.pro-frame-picker');
+    if (!w || !RANKING_TYPES.includes(w.type) || !picker) return;
+
+    const current = w.profileFrame || 'none';
+    picker.innerHTML = window.vyraBuildFramePicker(w);
 
     picker.querySelector('select').value = current;
     picker.querySelectorAll('[data-ws-gender]').forEach(btn => btn.onclick = () => { w.frameGenderTab = btn.dataset.wsGender; render(); });
