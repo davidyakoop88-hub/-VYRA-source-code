@@ -1,7 +1,8 @@
 # Builds VYRA-Download.zip — the package a visitor gets from the "Ladda ner" button on index.html.
-# Excludes developer/asset-pipeline-only material (Blender source files, extraction scripts, reference
-# footage, review/alpha-check pages) that end users running the app don't need, while keeping every file
-# the running app actually loads at runtime.
+# Includes the full Python + Blender asset-creation toolchain (scripts, .blend source files, and the
+# reference footage/sheets those scripts operate on) so downloaders can build their own themes, not just
+# run the app. Excludes only pure repo/dev-environment plumbing (git history, local Node runtime, npm
+# packages) and internal review/handoff pages that aren't part of the product either way.
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $staging = Join-Path $root '.download-staging'
@@ -12,14 +13,8 @@ New-Item -ItemType Directory -Path $staging | Out-Null
 
 $excludeDirs = @('.git', '.tools', 'node_modules', '.download-staging', '.claude')
 $excludeFiles = @(
-  '*.blend', '*.blend1', '*.mov',
-  'blender_*.py', 'analyze_*.py', 'configure_obs_tikcontrol.py', 'encode_*.py',
-  'inspect-video.py', 'extract_recording_moments.py', 'theme_validator.py', 'validate_fx_theme.py',
-  'create_theme_placeholders.py',
-  'extract-*.ps1', 'make-profile-frames.ps1', 'slice-battle-packs.ps1', 'split-image.ps1', 'build-profile-frames.ps1',
   'build-download.ps1',
   'reference-review.html', 'pink-princess-alpha-check.html', 'gift-counter-overlay-original.html',
-  'couture-sheet-key.png', 'frames-source.png', 'videoframe_2182.png',
   'CLAUDE-HANDOFF.md', 'CLAUDE.md', '.gitignore', 'vyra-state-backup.json', 'VYRA-Download.zip'
 )
 
