@@ -16,10 +16,18 @@
     "appId": "com.vyra.desktop",
     "productName": "VYRA",
     "asar": true,
-    "directories": { "output": "dist" },
+    "directories": { "output": "dist2" },
     "files": ["main.js", "local-server.js", "splash.html"],
-    "win": { "target": "portable" },
-    "portable": { "artifactName": "VYRA-Setup.exe" },
+    "win": { "target": "nsis" },
+    "nsis": {
+      "artifactName": "VYRA-Setup.exe",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VYRA"
+    },
     "extraResources": [
       {
         "from": "..",
