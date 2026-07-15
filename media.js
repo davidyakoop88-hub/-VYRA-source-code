@@ -245,4 +245,5 @@ Promise.resolve().then(()=>{let css=document.createElement('link');css.rel='styl
 Promise.resolve().then(()=>{let css=document.createElement('link');css.rel='stylesheet';css.href='toplike-studio.css?v=1';document.head.append(css);let js=document.createElement('script');js.src='toplike-studio.js?v=1';document.body.append(js)});
 Promise.resolve().then(()=>{let js=document.createElement('script');js.src='widget-background.js?v=1';document.body.append(js)});
 Promise.resolve().then(()=>{let js=document.createElement('script');js.src='live-leaderboard.js?v=1';document.body.append(js)});
+Promise.resolve().then(()=>{let js=document.createElement('script');js.src='state-backup.js?v=1';document.body.append(js)});
 
