@@ -17,7 +17,7 @@
     "productName": "VYRA",
     "asar": true,
     "directories": { "output": "dist" },
-    "files": ["main.js", "splash.html"],
+    "files": ["main.js", "local-server.js", "splash.html"],
     "win": { "target": "portable" },
     "portable": { "artifactName": "VYRA-Setup.exe" },
     "extraResources": [

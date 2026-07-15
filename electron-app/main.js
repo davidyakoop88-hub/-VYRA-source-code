@@ -1,14 +1,13 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn, execSync } = require('child_process');
-const http = require('http');
+const { startLocalServer } = require('./local-server');
 
 const PORT = 4173;
-let splash, main, serverProcess;
+let splash, main, httpServer;
 
 // Diagnostics: this process runs detached (no visible console), so log to a file we can inspect —
-// console.log alone is invisible once packaged, and was invisible even in dev via Start-Process.
+// console.log alone is invisible once packaged.
 const logPath = path.join(app.getPath('temp'), 'vyra-electron-debug.log');
 function log(...args) {
   const line = `[${new Date().toISOString()}] ${args.join(' ')}\n`;
@@ -43,34 +42,6 @@ function createSplash() {
   splash.on('closed', () => log('splash closed'));
 }
 
-function pingServer() {
-  return new Promise(resolve => {
-    const req = http.get(`http://127.0.0.1:${PORT}/api/status`, res => { res.resume(); resolve(true); });
-    req.on('error', () => resolve(false));
-    req.setTimeout(800, () => { req.destroy(); resolve(false); });
-  });
-}
-
-async function waitForServer(maxAttempts = 60) {
-  for (let i = 0; i < maxAttempts; i++) {
-    if (await pingServer()) return true;
-    await new Promise(r => setTimeout(r, 500));
-  }
-  return false;
-}
-
-function startServer() {
-  log('startServer(), cwd =', appRoot());
-  serverProcess = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'server.ps1'], {
-    cwd: appRoot(),
-    windowsHide: true
-  });
-  serverProcess.on('error', err => log('server.ps1 spawn error:', err.message));
-  serverProcess.on('exit', (code, signal) => log('server.ps1 exited, code =', code, 'signal =', signal));
-  serverProcess.stdout.on('data', d => log('server.ps1 stdout:', d.toString().trim()));
-  serverProcess.stderr.on('data', d => log('server.ps1 stderr:', d.toString().trim()));
-}
-
 function createMainWindow() {
   log('createMainWindow()');
   main = new BrowserWindow({
@@ -90,24 +61,21 @@ function createMainWindow() {
   main.on('closed', () => { log('main closed'); main = null; app.quit(); });
 }
 
-function killServer() {
-  if (!serverProcess || serverProcess.killed) return;
-  try { execSync(`taskkill /PID ${serverProcess.pid} /T /F`); } catch { /* already gone */ }
-}
-
 app.whenReady().then(async () => {
   log('app ready');
   createSplash();
-  startServer();
-  const ready = await waitForServer();
-  log('waitForServer resolved:', ready);
-  if (!ready) {
-    // Still try to show the app — the user can see the connection status in the UI and the server
-    // may just be slow to start on a loaded machine, rather than genuinely failed.
-    log('[VYRA] Servern svarade inte inom väntetiden, öppnar ändå.');
+  try {
+    httpServer = await startLocalServer(appRoot(), PORT);
+    log('local server listening on', PORT, 'root =', appRoot());
+  } catch (err) {
+    log('local server failed to start:', err.message);
   }
   createMainWindow();
 }).catch(err => log('app.whenReady chain threw:', err.stack || err.message));
 
-app.on('window-all-closed', () => { killServer(); if (process.platform !== 'darwin') app.quit(); });
-app.on('before-quit', killServer);
+function stopServer() {
+  if (httpServer) { try { httpServer.close(); } catch { /* already closed */ } }
+}
+
+app.on('window-all-closed', () => { stopServer(); if (process.platform !== 'darwin') app.quit(); });
+app.on('before-quit', stopServer);
