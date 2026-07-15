@@ -2,4 +2,6 @@
 node_modules/
 vyra-state-backup.json
 VYRA-Download.zip
+VYRA-Setup.exe
+vyra-payload.zip
 .download-staging/
