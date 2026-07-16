@@ -8,7 +8,7 @@
   // is fused with skin/crown/medal/tab logic that must stay Top-Like-only. This file's animation group
   // is a separate, minimal one (entrance + duration only), reusing the same ws-anim-* CSS classes.
 
-  const GIFT_ALERT_TYPES = ['templateTopGift', 'templateTopStreak', 'templateFollowerAlert', 'templateFanLevel', 'templateGifterLevel'];
+  const GIFT_ALERT_TYPES = ['templateTopGift', 'templateTopStreak', 'templateFollowerAlert', 'templateFanLevel', 'templateGifterLevel', 'templateLastGifter', 'templateLastLiker', 'templateLastSharer', 'templateLastSubscriber'];
 
   // Each widget's profile-photo container class. gifterLevelHtml has a second, smaller photo
   // (.gifter-bottom-profile, only shown in the "number" layout) that is intentionally left unframed
@@ -19,6 +19,10 @@
     templateFollowerAlert: 'follow-avatar',
     templateFanLevel: 'fan-profile',
     templateGifterLevel: 'gifter-orbit',
+    templateLastGifter: 'follow-avatar',
+    templateLastLiker: 'follow-avatar',
+    templateLastSharer: 'follow-avatar',
+    templateLastSubscriber: 'follow-avatar',
   };
 
   // ---- Render: composite the chosen avatar frame onto the profile photo + apply entrance animation ----

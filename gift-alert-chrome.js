@@ -46,7 +46,7 @@
       html = html.replace(/(<i style="[^"]*">)🔥(<\/i>)/, `$1${flameBadge}$2`);
     }
 
-    if (w.type === 'templateFollowerAlert') {
+    if (['templateFollowerAlert', 'templateLastGifter', 'templateLastLiker', 'templateLastSharer', 'templateLastSubscriber'].includes(w.type)) {
       html = html.replace('<div class="follow-light"></div>', `<div class="follow-light">${spotlightBeam}</div>`);
     }
 
