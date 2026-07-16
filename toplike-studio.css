@@ -66,57 +66,57 @@
 .toplike-skin-swatch.skin-goldrush i{background:linear-gradient(135deg,#2a1704,#e8b64d)}
 
 /* ---- Skin rendering on the live widget (colors/glow only — never layout, .like-clean/.like-center own that) ---- */
-.vyra-toplike.skin-royal-gold{border-color:#caa04a!important;box-shadow:0 0 22px #caa04a30!important;background:#120d05e0!important}
+.vyra-toplike.skin-royal-gold{border-color:#caa04a!important;box-shadow:0 0 22px #caa04a30!important;background:transparent!important}
 .vyra-toplike.skin-royal-gold>h3{color:#f0d489!important;text-shadow:0 0 10px #caa04a80!important}
 .vyra-toplike.skin-royal-gold .toplike-row>b{background:#caa04a!important;color:#1a1204!important}
 .vyra-toplike.skin-royal-gold .toplike-row em{color:#f0d489!important}
 
-.vyra-toplike.skin-neon{border-color:#ff3ec8!important;box-shadow:0 0 24px #ff3ec850!important;background:#12061ce0!important}
+.vyra-toplike.skin-neon{border-color:#ff3ec8!important;box-shadow:0 0 24px #ff3ec850!important;background:transparent!important}
 .vyra-toplike.skin-neon>h3{color:#ff8ee0!important;text-shadow:0 0 12px #ff3ec880!important}
 .vyra-toplike.skin-neon .toplike-row>b{background:#ff3ec8!important;color:#1a0512!important;box-shadow:0 0 8px #ff3ec880}
 .vyra-toplike.skin-neon .toplike-row em{color:#8ff3ff!important}
 
-.vyra-toplike.skin-galaxy{border-color:#8452ff!important;box-shadow:0 0 24px #8452ff40!important;background:#0d0620e0!important}
+.vyra-toplike.skin-galaxy{border-color:#8452ff!important;box-shadow:0 0 24px #8452ff40!important;background:transparent!important}
 .vyra-toplike.skin-galaxy>h3{color:#c9a9ff!important;text-shadow:0 0 12px #8452ff80!important}
 .vyra-toplike.skin-galaxy .toplike-row>b{background:#8452ff!important;color:#0d0620!important}
 .vyra-toplike.skin-galaxy .toplike-row em{color:#c9a9ff!important}
 
-.vyra-toplike.skin-ice{border-color:#7fe7ff!important;box-shadow:0 0 22px #7fe7ff40!important;background:#04141ae0!important}
+.vyra-toplike.skin-ice{border-color:#7fe7ff!important;box-shadow:0 0 22px #7fe7ff40!important;background:transparent!important}
 .vyra-toplike.skin-ice>h3{color:#c9f7ff!important;text-shadow:0 0 12px #7fe7ff80!important}
 .vyra-toplike.skin-ice .toplike-row>b{background:#7fe7ff!important;color:#03272e!important}
 .vyra-toplike.skin-ice .toplike-row em{color:#c9f7ff!important}
 
-.vyra-toplike.skin-fire{border-color:#ff7a1a!important;box-shadow:0 0 24px #ff7a1a45!important;background:#1a0902e0!important}
+.vyra-toplike.skin-fire{border-color:#ff7a1a!important;box-shadow:0 0 24px #ff7a1a45!important;background:transparent!important}
 .vyra-toplike.skin-fire>h3{color:#ffbf7a!important;text-shadow:0 0 12px #ff7a1a80!important}
 .vyra-toplike.skin-fire .toplike-row>b{background:#ff7a1a!important;color:#1a0902!important}
 .vyra-toplike.skin-fire .toplike-row em{color:#ffbf7a!important}
 
-.vyra-toplike.skin-sakura{border-color:#ffb3d1!important;box-shadow:0 0 20px #ffb3d140!important;background:#1a0d14e0!important}
+.vyra-toplike.skin-sakura{border-color:#ffb3d1!important;box-shadow:0 0 20px #ffb3d140!important;background:transparent!important}
 .vyra-toplike.skin-sakura>h3{color:#ffd7e8!important;text-shadow:0 0 10px #ffb3d180!important}
 .vyra-toplike.skin-sakura .toplike-row>b{background:#ffb3d1!important;color:#2a0e1a!important}
 .vyra-toplike.skin-sakura .toplike-row em{color:#ffd7e8!important}
 
-.vyra-toplike.skin-cyber{border-color:#28e0ff!important;box-shadow:0 0 22px #28e0ff40!important;background:#020c10e0!important}
+.vyra-toplike.skin-cyber{border-color:#28e0ff!important;box-shadow:0 0 22px #28e0ff40!important;background:transparent!important}
 .vyra-toplike.skin-cyber>h3{color:#a6f4ff!important;text-shadow:0 0 12px #28e0ff80!important}
 .vyra-toplike.skin-cyber .toplike-row>b{background:#28e0ff!important;color:#02171c!important}
 .vyra-toplike.skin-cyber .toplike-row em{color:#a6f4ff!important}
 
-.vyra-toplike.skin-luxury{border-color:#c79bff!important;box-shadow:0 0 24px #c79bff40!important;background:#150a1fe0!important}
+.vyra-toplike.skin-luxury{border-color:#c79bff!important;box-shadow:0 0 24px #c79bff40!important;background:transparent!important}
 .vyra-toplike.skin-luxury>h3{color:#e8d4ff!important;text-shadow:0 0 12px #c79bff80!important}
 .vyra-toplike.skin-luxury .toplike-row>b{background:linear-gradient(135deg,#c79bff,#e8c25a)!important;color:#150a1f!important}
 .vyra-toplike.skin-luxury .toplike-row em{color:#e8d4ff!important}
 
-.vyra-toplike.skin-aurora{border-color:#4fd8c4!important;box-shadow:0 0 24px #4fd8c440!important;background:#041a17e0!important}
+.vyra-toplike.skin-aurora{border-color:#4fd8c4!important;box-shadow:0 0 24px #4fd8c440!important;background:transparent!important}
 .vyra-toplike.skin-aurora>h3{color:#a6fff0!important;text-shadow:0 0 12px #4fd8c480!important}
 .vyra-toplike.skin-aurora .toplike-row>b{background:#4fd8c4!important;color:#04211c!important}
 .vyra-toplike.skin-aurora .toplike-row em{color:#a6fff0!important}
 
-.vyra-toplike.skin-retro-crt{border-color:#3dff7a!important;box-shadow:0 0 24px #3dff7a40!important;background:#00120ae0!important}
+.vyra-toplike.skin-retro-crt{border-color:#3dff7a!important;box-shadow:0 0 24px #3dff7a40!important;background:transparent!important}
 .vyra-toplike.skin-retro-crt>h3{color:#b8ffcf!important;text-shadow:0 0 12px #3dff7a80!important;font-family:'Courier New',monospace!important}
 .vyra-toplike.skin-retro-crt .toplike-row>b{background:#3dff7a!important;color:#001a08!important}
 .vyra-toplike.skin-retro-crt .toplike-row em{color:#b8ffcf!important;font-family:'Courier New',monospace!important}
 
-.vyra-toplike.skin-goldrush{border-color:#e8b64d!important;box-shadow:0 0 24px #e8b64d45!important;background:#1a1004e0!important}
+.vyra-toplike.skin-goldrush{border-color:#e8b64d!important;box-shadow:0 0 24px #e8b64d45!important;background:transparent!important}
 .vyra-toplike.skin-goldrush>h3{color:#ffe2a3!important;text-shadow:0 0 12px #e8b64d80!important}
 .vyra-toplike.skin-goldrush .toplike-row>b{background:linear-gradient(135deg,#e8b64d,#fff3d0)!important;color:#1a1004!important}
 .vyra-toplike.skin-goldrush .toplike-row em{color:#ffe2a3!important}
