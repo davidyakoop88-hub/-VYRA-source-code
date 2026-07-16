@@ -2,7 +2,8 @@
   const RANKING_TYPES = ['templateTopLike', 'templateTopCoins', 'templateTopPoints'];
   const SKINS = [
     ['royal-gold', 'Royal Gold'], ['neon', 'Neon'], ['galaxy', 'Galaxy'], ['ice', 'Ice'],
-    ['fire', 'Fire'], ['sakura', 'Sakura'], ['cyber', 'Cyber'], ['luxury', 'Luxury']
+    ['fire', 'Fire'], ['sakura', 'Sakura'], ['cyber', 'Cyber'], ['luxury', 'Luxury'],
+    ['aurora', 'Aurora'], ['retro-crt', 'Retro CRT'], ['goldrush', 'Gold Rush']
   ];
 
   // Avatar Frame library — real illustrated PNGs where a matching asset already exists in the repo
