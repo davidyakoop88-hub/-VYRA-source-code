@@ -53,7 +53,10 @@
     const anim = w.entranceAnimation && w.entranceAnimation !== 'none' ? ` ws-anim-${w.entranceAnimation}` : '';
     html = html.replace('class="widget vyra-toplike', `class="widget vyra-toplike skin-${skin}${anim}`);
     html = html.replace('style="', `style="opacity:${w.opacity ?? 1};`);
-    if (w.showCrown !== false) html = html.replace('rank-1"><b>1</b>', 'rank-1"><i class="toplike-crown">♛</i><b>1</b>');
+    // Skip the auto crown glyph when a custom illustrated frame is chosen - several frames (e.g.
+    // golden-king) already have their own crown/regal motif baked into the art, so the separate ♛
+    // badge just clutters the gap between the photo and the frame instead of adding anything.
+    if (w.showCrown !== false && (!w.profileFrame || w.profileFrame === 'none')) html = html.replace('rank-1"><b>1</b>', 'rank-1"><i class="toplike-crown">♛</i><b>1</b>');
 
     // Automatic gold/silver/bronze medal ring for #1/#2/#3 — only when no custom Avatar Frame is chosen,
     // so the explicit frame picker (proTopLikeFrameBind/premiumProfileFramesBind) still wins when used.
