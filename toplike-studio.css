@@ -128,7 +128,11 @@
 
 /* ---- Crown on rank #1 ---- */
 .toplike-row.rank-1{position:relative}
-.toplike-crown{position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-size:13px;font-style:normal;color:#ffd76a;text-shadow:0 0 8px #ffb02580;pointer-events:none;z-index:6}
+/* left is a fixed px (not 50%) matching the avatar/frame column's own center — the row is a grid
+   with a wide 1fr name column, so 50% of the whole row would center over the name text, not the
+   avatar above it. ~53px lines up with both the no-frame (27px+7px gap+37px/2) and framed
+   (25px+5px gap+48px/2) column layouts, which land within a couple px of each other. */
+.toplike-crown{position:absolute;top:-13px;left:53px;transform:translateX(-50%);font-size:13px;font-style:normal;color:#ffd76a;text-shadow:0 0 8px #ffb02580;pointer-events:none;z-index:6}
 
 /* ---- Entrance animations ---- */
 @keyframes wsFadeIn{from{opacity:0}to{opacity:1}}
