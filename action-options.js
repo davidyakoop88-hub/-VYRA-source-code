@@ -9,8 +9,9 @@
     if (!host) { host = document.createElement('div'); host.id = 'vyraActionAlertHost'; document.body.append(host); }
     host.innerHTML = '';
     const el = document.createElement('div');
-    el.className = `vyra-action-alert ${c.alertStyle || 'premium'} ${c.alertPosition || 'bottom'}`;
-    el.textContent = fill(c.alertText || 'Tack {username} för {giftname}!', payload);
+    el.className = `vyra-action-alert ${c.alertStyle || 'premium'} ${c.alertPosition || 'bottom'}${payload.profileImage ? ' has-avatar' : ''}`;
+    if (payload.profileImage) { const img = document.createElement('img'); img.className = 'vaa-avatar'; img.src = payload.profileImage; el.append(img); }
+    const text = document.createElement('span'); text.className = 'vaa-text'; text.textContent = fill(c.alertText || 'Tack {username} för {giftname}!', payload); el.append(text);
     el.style.cssText = `--alert-color:${c.alertColor||'#fff'};--alert-bg:${c.alertBackground||'#16091d'};--alert-accent:${c.alertAccent||'#ff3eaa'};--alert-size:${c.alertSize||28}px;--alert-font:${c.alertFont||'Inter,Arial,sans-serif'}`;
     host.append(el); requestAnimationFrame(() => el.classList.add('show'));
     const ms = Math.max(1, action.duration || 6) * 1000;
