@@ -12,8 +12,8 @@
   // see README.md). Placeholder ids are exactly the ones with ext:'svg'.
   const FRAMES = {
     boys: [
-      ['classic-gold', 'Classic Gold', 'golden-king', 'png'], ['silver-steel', 'Silver Steel', 'silver', 'png'],
-      ['bronze', 'Bronze', 'bronze', 'png'], ['diamond', 'Diamond', 'aurora-diamond', 'png'],
+      ['classic-gold', 'Classic Gold', 'golden-king', 'png'], ['silver-steel', 'Silver Steel', 'silver', 'svg'],
+      ['bronze', 'Bronze', 'bronze', 'svg'], ['diamond', 'Diamond', 'aurora-diamond', 'png'],
       ['royal-crown', 'Royal Crown', 'champagne-crown', 'png'], ['heroic', 'Heroic', 'heroic', 'svg'],
       ['flame', 'Flame', 'flame', 'svg'], ['ice', 'Ice', 'ice-crystal', 'png'],
       ['neon-blue', 'Neon Blue', 'neon-blue', 'svg'], ['neon-purple', 'Neon Purple', 'neon-purple', 'png'],
