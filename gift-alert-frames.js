@@ -88,7 +88,7 @@
     if (!panel.querySelector('.gaf-anim-group')) {
       const animGroup = document.createElement('div');
       animGroup.className = 'property-group gaf-anim-group';
-      animGroup.innerHTML = `<h4>ANIMATION</h4><label>Inträdeseffekt<select id="gafEntrance"><option value="none">Ingen</option><option value="fade">Tona in</option><option value="slideUp">Glid upp</option><option value="pop">Poppa in</option></select></label><label class="range-label">Varaktighet <b>${w.entranceDuration || 600} ms</b><input id="gafEntranceDuration" type="range" min="150" max="1500" step="50" value="${w.entranceDuration || 600}"></label>`;
+      animGroup.innerHTML = `<h4>ANIMATION</h4><label>Inträdeseffekt<select id="gafEntrance"><option value="none">Ingen</option><option value="fade">Tona in</option><option value="slideUp">Glid upp</option><option value="pop">Poppa in</option><option value="signal">Signal Lock · glid in + scanline</option><option value="gilded">Gilded Invite · tona in + skala</option></select></label><label class="range-label">Varaktighet <b>${w.entranceDuration || 600} ms</b><input id="gafEntranceDuration" type="range" min="150" max="1500" step="50" value="${w.entranceDuration || 600}"></label>`;
       if (del) del.before(animGroup); else panel.append(animGroup);
 
       const entrance = animGroup.querySelector('#gafEntrance');
