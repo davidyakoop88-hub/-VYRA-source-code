@@ -1,12 +1,16 @@
 // Sound Alerts — bibliotek med ljudklipp som kan kopplas till events.
-// Källa: mixkit.co, Mixkit License (royaltyfritt, ingen attribution krävs, tillåtet i kommersiella projekt).
+// Källor: mixkit.co (Mixkit License) och pixabay.com (Pixabay Content License) — båda royaltyfria,
+// ingen attribution krävs, tillåtna i kommersiella projekt.
 const soundAlerts={
   followCheer:{id:'followCheer',name:'Follow Cheer',path:'assets/sounds/mixkit/follow-cheer.mp3'},
   giftCoinWin:{id:'giftCoinWin',name:'Gift Coin Win',path:'assets/sounds/mixkit/gift-coin-win.mp3'},
   positiveNotification:{id:'positiveNotification',name:'Positive Notification',path:'assets/sounds/mixkit/positive-notification.mp3'},
   memberBells:{id:'memberBells',name:'Member Bells',path:'assets/sounds/mixkit/member-bells.mp3'},
   alertBell:{id:'alertBell',name:'Alert Bell',path:'assets/sounds/mixkit/alert-bell.mp3'},
-  arcadeWin:{id:'arcadeWin',name:'Arcade Win',path:'assets/sounds/mixkit/arcade-win.mp3'}
+  arcadeWin:{id:'arcadeWin',name:'Arcade Win',path:'assets/sounds/mixkit/arcade-win.mp3'},
+  pewPew:{id:'pewPew',name:'Pew Pew',path:'assets/sounds/mixkit/pew-pew.mp3'},
+  thankYou:{id:'thankYou',name:'Thank You',path:'assets/sounds/mixkit/thank-you.mp3'},
+  iLoveYou:{id:'iLoveYou',name:'I Love You',path:'assets/sounds/pixabay/i-love-you.mp3'}
 };
 const SA_TRIGGERS={gift:'Gåva mottagen',follow:'Ny följare',member:'Ny medlem',likes:'Likes uppnådda',share:'Delning',chat:'Chattkommando',chatCommand:'Chattkommando',giftCoins:'Minsta coin-värde',subscriberEmote:'Subscriber-emote',fanSticker:'Fan Club-sticker',shopPurchase:'TikTok Shop-köp'};
 const AE_KEY='vyra-action-event-v2';
