@@ -261,4 +261,5 @@ Promise.resolve().then(()=>{let js=document.createElement('script');js.src='live
 Promise.resolve().then(()=>{let js=document.createElement('script');js.src='state-backup.js?v=1';document.body.append(js)});
 Promise.resolve().then(()=>{let js=document.createElement('script');js.src='overlay-packages.js?v=1';document.body.append(js)});
 Promise.resolve().then(()=>{let js=document.createElement('script');js.src='custom-widgets.js?v=1';document.body.append(js)});
+Promise.resolve().then(()=>{let js=document.createElement('script');js.src='sound-alerts.js?v=1';document.body.append(js)});
 
