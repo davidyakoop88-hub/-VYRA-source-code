@@ -138,17 +138,17 @@
 @keyframes wsFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes wsSlideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @keyframes wsPopIn{0%{opacity:0;transform:scale(.85)}70%{opacity:1;transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
-.ws-anim-fade{animation:wsFadeIn .5s ease both}
-.ws-anim-slideUp{animation:wsSlideUp .5s ease both}
-.ws-anim-pop{animation:wsPopIn .5s cubic-bezier(.2,.8,.3,1.2) both}
+.ws-anim-fade{animation:wsFadeIn var(--ws-anim-duration,.5s) ease both}
+.ws-anim-slideUp{animation:wsSlideUp var(--ws-anim-duration,.5s) ease both}
+.ws-anim-pop{animation:wsPopIn var(--ws-anim-duration,.5s) cubic-bezier(.2,.8,.3,1.2) both}
 
 @keyframes wsSignalIn{0%{opacity:0;transform:translateX(28px)}55%{opacity:1}100%{opacity:1;transform:translateX(0)}}
 @keyframes wsScanSweep{0%{top:0;opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
-.ws-anim-signal{animation:wsSignalIn .55s cubic-bezier(.2,.9,.25,1) both}
-.ws-anim-signal::after{content:"";position:absolute;left:0;right:0;height:2px;top:0;background:linear-gradient(90deg,transparent,#29f1ffcc,transparent);animation:wsScanSweep 1.1s ease-out .15s both;pointer-events:none;z-index:6}
+.ws-anim-signal{animation:wsSignalIn var(--ws-anim-duration,.55s) cubic-bezier(.2,.9,.25,1) both}
+.ws-anim-signal::after{content:"";position:absolute;left:0;right:0;height:2px;top:0;background:linear-gradient(90deg,transparent,#29f1ffcc,transparent);animation:wsScanSweep calc(var(--ws-anim-duration,.55s) * 2) ease-out .15s both;pointer-events:none;z-index:6}
 
 @keyframes wsGildedIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
-.ws-anim-gilded{animation:wsGildedIn .7s cubic-bezier(.16,1,.3,1) both}
+.ws-anim-gilded{animation:wsGildedIn var(--ws-anim-duration,.7s) cubic-bezier(.16,1,.3,1) both}
 
 /* ---- Overlay toolbar additions (Resolution + Export, appended into the existing overlay-link-bar) ---- */
 .overlay-link-bar{grid-template-columns:minmax(220px,1fr) auto auto auto auto auto!important}

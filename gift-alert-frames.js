@@ -32,7 +32,10 @@
     if (!GIFT_ALERT_TYPES.includes(w.type)) return html;
 
     const anim = w.entranceAnimation && w.entranceAnimation !== 'none' ? ` ws-anim-${w.entranceAnimation}` : '';
-    if (anim) html = html.replace('class="widget ', `class="widget${anim} `);
+    if (anim) {
+      html = html.replace('class="widget ', `class="widget${anim} `);
+      html = html.replace('style="', `style="--ws-anim-duration:${w.entranceDuration || 600}ms;`);
+    }
 
     if (w.profileFrame && w.profileFrame !== 'none') {
       const anchor = ANCHORS[w.type];
@@ -88,13 +91,22 @@
     if (!panel.querySelector('.gaf-anim-group')) {
       const animGroup = document.createElement('div');
       animGroup.className = 'property-group gaf-anim-group';
-      animGroup.innerHTML = `<h4>ANIMATION</h4><label>Inträdeseffekt<select id="gafEntrance"><option value="none">Ingen</option><option value="fade">Tona in</option><option value="slideUp">Glid upp</option><option value="pop">Poppa in</option><option value="signal">Signal Lock · glid in + scanline</option><option value="gilded">Gilded Invite · tona in + skala</option></select></label><label class="range-label">Varaktighet <b>${w.entranceDuration || 600} ms</b><input id="gafEntranceDuration" type="range" min="150" max="1500" step="50" value="${w.entranceDuration || 600}"></label>`;
+      animGroup.innerHTML = `<h4>ANIMATION</h4><label>Inträdeseffekt<select id="gafEntrance"><option value="none">Ingen</option><option value="fade">Tona in</option><option value="slideUp">Glid upp</option><option value="pop">Poppa in</option><option value="signal">Signal Lock · glid in + scanline</option><option value="gilded">Gilded Invite · tona in + skala</option></select></label><label class="range-label">Varaktighet <b>${w.entranceDuration || 600} ms</b><input id="gafEntranceDuration" type="range" min="150" max="1500" step="50" value="${w.entranceDuration || 600}"></label><button type="button" id="gafTestAnim">▶ Testa animation</button>`;
       if (del) del.before(animGroup); else panel.append(animGroup);
 
       const entrance = animGroup.querySelector('#gafEntrance');
       entrance.value = w.entranceAnimation || 'none';
       entrance.onchange = e => { w.entranceAnimation = e.target.value; save(); render(); };
       animGroup.querySelector('#gafEntranceDuration').onchange = e => { w.entranceDuration = +e.target.value; save(); render(); };
+      animGroup.querySelector('#gafTestAnim').onclick = () => {
+        if (!w.entranceAnimation || w.entranceAnimation === 'none') { toast('Välj en inträdeseffekt först'); return; }
+        const el = document.querySelector(`[data-id="${w.id}"]`);
+        if (!el) return;
+        const cls = 'ws-anim-' + w.entranceAnimation;
+        el.classList.remove(cls);
+        void el.offsetWidth;
+        el.classList.add(cls);
+      };
     }
   };
 
