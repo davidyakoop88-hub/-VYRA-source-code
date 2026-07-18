@@ -207,13 +207,19 @@ html.overlay-output .resize-handle{display:none!important}
 .overlay-widget-gallery .widget-catalog section{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
 .overlay-widget-gallery .widget-catalog section h4{flex-basis:100%;margin:0 0 2px;font-size:10px;color:#9d87ac;letter-spacing:.5px}
 .overlay-widget-gallery .widget-catalog section>div{display:contents}
-.overlay-widget-gallery .widget-catalog button{flex:0 0 148px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:16px 10px 12px;background:#170c20;border:1px solid #2b2438;border-radius:10px;cursor:pointer}
+.overlay-widget-gallery .widget-catalog button{flex:0 0 210px;display:flex;flex-direction:column;text-align:left;padding:0;background:#170c20;border:1px solid #2b2438;border-radius:12px;cursor:pointer;overflow:hidden}
 .overlay-widget-gallery .widget-catalog button:hover{border-color:#b13cff}
-.overlay-widget-gallery .widget-catalog button i{font-style:normal;font-size:24px;width:50px;height:50px;display:flex;align-items:center;justify-content:center;background:#0d0714;border-radius:10px;color:#b490ff}
-.overlay-widget-gallery .widget-catalog button span{display:flex;flex-direction:column;align-items:center;gap:2px}
-.overlay-widget-gallery .widget-catalog button b{font-size:10px;color:#fff}
+.overlay-widget-gallery .widget-catalog button .owg-thumb{position:relative;width:100%;height:104px;background:#0a0510;overflow:hidden;flex:0 0 auto}
+.overlay-widget-gallery .widget-catalog button .owg-thumb-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}
+.overlay-widget-gallery .widget-catalog button .owg-thumb-inner .widget{position:static!important;left:auto!important;top:auto!important}
+.overlay-widget-gallery .widget-catalog button .owg-thumb-inner .resize-handle{display:none!important}
+.overlay-widget-gallery .widget-catalog button .owg-thumb-inner .widget.selected{outline:0!important}
+.overlay-widget-gallery .widget-catalog button i{font-style:normal;font-size:20px;width:40px;height:40px;margin:14px 0 0 14px;display:flex;align-items:center;justify-content:center;background:#0d0714;border-radius:9px;color:#b490ff}
+.overlay-widget-gallery .widget-catalog button span{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px 4px}
+.overlay-widget-gallery .widget-catalog button > b{display:block;padding:10px 12px 4px;font-size:11px;color:#fff}
+.overlay-widget-gallery .widget-catalog button b{font-size:11px;color:#fff}
 .overlay-widget-gallery .widget-catalog button small{font-size:8px;color:#8a7a95}
-.overlay-widget-gallery .widget-catalog button .owg-add{margin-top:6px;background:#e0345c;color:#fff;font-size:9px;font-weight:700;padding:6px 14px;border-radius:20px}
+.overlay-widget-gallery .widget-catalog button .owg-add{display:block;margin:8px 12px 12px;background:#e0345c;color:#fff;font-size:10px;font-weight:700;padding:8px;border-radius:8px;text-align:center}
 .elements:not(.catalog-open) .panel-title,.elements:not(.catalog-open) .catalog-notice,.elements:not(.catalog-open) .widget-search,.elements:not(.catalog-open) .widget-catalog{display:none}
 .live-layer-actions{display:flex;gap:6px}
 .live-layer-actions button{white-space:nowrap}
