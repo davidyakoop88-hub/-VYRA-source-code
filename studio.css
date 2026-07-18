@@ -188,21 +188,6 @@ html.overlay-output .resize-handle{display:none!important}
 .sa-trigger-row{display:block;margin:8px 0 4px;font-size:8px;color:#9d87ac}.sa-trigger-row select{width:100%;margin-top:4px;background:#170c20;border:1px solid #452656;color:#fff;border-radius:6px;padding:7px;font-size:8px}
 .sa-condition{width:100%;background:#170c20;border:1px solid #452656;color:#fff;border-radius:6px;padding:7px;font-size:8px;margin:2px 0}
 .sa-empty{color:#9d87ac;font-size:10px;padding:30px;text-align:center}
-.overlay-preview-layout{display:grid;grid-template-columns:1fr 300px;gap:22px;align-items:start}
-.overlay-preview-stage{background:#110a18;border:1px solid var(--line,#2b2438);border-radius:12px;padding:18px}
-.overlay-scene-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.overlay-scene-bar label{display:flex;align-items:center;gap:8px;font-size:10px;color:#9d87ac}
-.overlay-scene-bar select{background:#170c20;border:1px solid #452656;color:#fff;border-radius:6px;padding:6px 8px;font-size:10px}
-.overlay-scene-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#9d87ac}
-.overlay-scene-status i{width:8px;height:8px;border-radius:50%;background:#6d6470;display:inline-block;font-style:normal}
-.overlay-scene-status.online{color:#54efa3}.overlay-scene-status.online i{background:#54efa3;box-shadow:0 0 6px #54efa3}
-.overlay-scene-status.offline{color:#e0567a}.overlay-scene-status.offline i{background:#e0567a}
-.overlay-frame-wrap{width:100%;max-width:340px;margin:0 auto;aspect-ratio:9/16;border-radius:10px;overflow:hidden;background:#050308;border:1px solid #2b2438}
-.overlay-frame-wrap iframe{width:100%;height:100%;border:0;display:block}
-.overlay-link-row{display:flex;gap:8px;margin-top:14px}
-.overlay-link-row input{flex:1;background:#170c20;border:1px solid #452656;color:#cbb9d6;border-radius:6px;padding:8px 10px;font-size:10px}
-.overlay-link-row button{background:#211230;border:1px solid #452656;color:#fff;border-radius:6px;padding:8px 12px;font-size:10px;white-space:nowrap}
-.overlay-res-hint{display:block;margin-top:10px;color:#9d87ac;font-size:9px}
 .overlay-preview-sidebar{background:#110a18;border:1px solid var(--line,#2b2438);border-radius:12px;padding:16px}
 .overlay-preview-sidebar h4{margin:0 0 10px;font-size:10px;letter-spacing:.4px;color:#b490ff}
 .overlay-widget-list{display:grid;gap:6px}
