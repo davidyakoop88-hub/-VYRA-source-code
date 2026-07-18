@@ -27,7 +27,7 @@
   const lastXBind = bind;
   bind = function () {
     lastXBind();
-    if (view !== 'editor') return;
+    if (view !== 'editor' && view !== 'overlay') return;
     const w = state.widgets.find(x => x.id === selected), cfg = w && LAST_X[w.type];
     if (cfg) {
       const set = (id, key, num = false) => { const el = document.querySelector(id); if (el) el.onchange = e => { w[key] = num ? +e.target.value : e.target.value; save(); render(); }; };
