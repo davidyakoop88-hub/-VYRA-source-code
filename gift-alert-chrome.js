@@ -26,9 +26,12 @@
     }
     return pts.join(' ');
   }
-  // rOuter=40 (not the full 50 that reaches the viewBox edge) so the star's points sit tucked
-  // behind the heart image instead of poking out past its silhouette.
-  const fanBurst = `<svg viewBox="0 0 100 100" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"><polygon points="${starburst(10, 40, 24)}" fill="var(--fan)" opacity="0.9"/><polygon points="${starburst(10, 40, 24)}" fill="var(--fan-light)" opacity="0.35" transform="rotate(18 50 50)"/></svg>`;
+  // The heart PNG's own visible (non-transparent) content only fills ~73-80% of its square
+  // canvas (measured directly: 284x310 out of 390x390), so at rOuter=40 the star's points were
+  // still landing at roughly the same size as the heart's actual silhouette — a spiky shape reads
+  // as "bigger" than a rounded one at the same nominal radius, so it kept poking out. Pulled well
+  // inside that (rOuter=28) so the star sits clearly behind the heart as a small glow accent.
+  const fanBurst = `<svg viewBox="0 0 100 100" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"><polygon points="${starburst(10, 28, 16)}" fill="var(--fan)" opacity="0.9"/><polygon points="${starburst(10, 28, 16)}" fill="var(--fan-light)" opacity="0.35" transform="rotate(18 50 50)"/></svg>`;
 
   const orbitRing = `<svg viewBox="0 0 190 190" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"><circle cx="95" cy="95" r="90" fill="none" stroke="var(--gifter)" stroke-width="2" opacity="0.55"/><circle cx="95" cy="95" r="74" fill="none" stroke="var(--gifter-light)" stroke-width="1.5" stroke-dasharray="3 6" opacity="0.7"/>${[0, 90, 180, 270].map(deg => {
     const a = (deg * Math.PI) / 180, x = 95 + 90 * Math.cos(a), y = 95 + 90 * Math.sin(a);
