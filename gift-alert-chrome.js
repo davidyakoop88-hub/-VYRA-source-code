@@ -16,9 +16,9 @@
 
   const spotlightBeam = `<svg viewBox="0 0 180 280" preserveAspectRatio="none" style="width:100%;height:100%"><defs><linearGradient id="gafBeam" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--follow)" stop-opacity="0.55"/><stop offset="100%" stop-color="var(--follow)" stop-opacity="0"/></linearGradient></defs><polygon points="63,0 117,0 180,280 0,280" fill="url(#gafBeam)"/><line x1="70" y1="0" x2="20" y2="270" stroke="var(--follow)" stroke-width="1.5" opacity="0.4"/><line x1="90" y1="0" x2="90" y2="270" stroke="var(--follow)" stroke-width="1.5" opacity="0.55"/><line x1="110" y1="0" x2="160" y2="270" stroke="var(--follow)" stroke-width="1.5" opacity="0.4"/></svg>`;
 
-  function starburst(count) {
+  function starburst(count, rOuter = 50, rInner = 30) {
     const pts = [];
-    const cx = 50, cy = 50, rOuter = 50, rInner = 30;
+    const cx = 50, cy = 50;
     for (let i = 0; i < count * 2; i++) {
       const r = i % 2 === 0 ? rOuter : rInner;
       const a = (Math.PI * i) / count - Math.PI / 2;
@@ -26,7 +26,9 @@
     }
     return pts.join(' ');
   }
-  const fanBurst = `<svg viewBox="0 0 100 100" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"><polygon points="${starburst(10)}" fill="var(--fan)" opacity="0.9"/><polygon points="${starburst(10)}" fill="var(--fan-light)" opacity="0.35" transform="rotate(18 50 50)"/></svg>`;
+  // rOuter=40 (not the full 50 that reaches the viewBox edge) so the star's points sit tucked
+  // behind the heart image instead of poking out past its silhouette.
+  const fanBurst = `<svg viewBox="0 0 100 100" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"><polygon points="${starburst(10, 40, 24)}" fill="var(--fan)" opacity="0.9"/><polygon points="${starburst(10, 40, 24)}" fill="var(--fan-light)" opacity="0.35" transform="rotate(18 50 50)"/></svg>`;
 
   const orbitRing = `<svg viewBox="0 0 190 190" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"><circle cx="95" cy="95" r="90" fill="none" stroke="var(--gifter)" stroke-width="2" opacity="0.55"/><circle cx="95" cy="95" r="74" fill="none" stroke="var(--gifter-light)" stroke-width="1.5" stroke-dasharray="3 6" opacity="0.7"/>${[0, 90, 180, 270].map(deg => {
     const a = (deg * Math.PI) / 180, x = 95 + 90 * Math.cos(a), y = 95 + 90 * Math.sin(a);
