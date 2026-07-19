@@ -221,5 +221,8 @@ html.overlay-output .resize-handle{display:none!important}
 .overlay-widget-gallery .widget-catalog button small{font-size:8px;color:#8a7a95}
 .overlay-widget-gallery .widget-catalog button .owg-add{display:block;margin:8px 12px 12px;background:#e0345c;color:#fff;font-size:10px;font-weight:700;padding:8px;border-radius:8px;text-align:center}
 .elements:not(.catalog-open) .panel-title,.elements:not(.catalog-open) .catalog-notice,.elements:not(.catalog-open) .widget-search,.elements:not(.catalog-open) .widget-catalog{display:none}
-.live-layer-actions{display:flex;gap:6px}
-.live-layer-actions button{white-space:nowrap}
+.live-layer-add{display:block;width:100%;margin-top:9px;padding:10px!important;background:#e0345c!important;border:0!important;border-radius:8px;color:#fff!important;font-size:9px!important;font-weight:800;letter-spacing:.3px;text-align:center;box-shadow:0 4px 14px #e0345c4d}
+.live-layer-add:hover{background:#f04070!important}
+.layer-eye{color:#7dffb4!important}
+.is-hidden .layer-eye{color:#e0a8b8!important}
+.layer-delete{color:#ff8fa3!important}
