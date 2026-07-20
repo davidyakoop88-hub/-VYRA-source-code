@@ -3,8 +3,8 @@
 /* Compact ranking rows: the rank belongs to the portrait, not the empty margin. */
 .vyra-toplike:not(.like-center) .toplike-row,
 .vyra-toplike:not(.like-center) .toplike-row:has(>.pro-avatar-frame){
-  grid-template-columns:23px 42px minmax(72px,1fr)!important;
-  column-gap:0!important;
+  grid-template-columns:23px 60px minmax(72px,1fr)!important;
+  column-gap:4px!important;
   padding-left:4px!important;
 }
 .vyra-toplike:not(.like-center) .toplike-row>b{justify-self:end!important;margin-right:0!important;position:relative!important;z-index:5!important}
@@ -16,15 +16,15 @@
 .vyra-toplike:not(.like-center) .toplike-row:has(>.pro-avatar-frame)>em{transform:none!important}
 
 /* Dense leaderboard rhythm, matching compact live ranking widgets. */
-.vyra-toplike:not(.like-center)>.toplike-list{gap:1px!important}
-.vyra-toplike:not(.like-center) .toplike-row{height:44px!important;padding-top:2px!important;padding-bottom:2px!important}
+.vyra-toplike:not(.like-center)>.toplike-list{gap:6px!important}
+.vyra-toplike:not(.like-center) .toplike-row{height:68px!important;padding-top:2px!important;padding-bottom:2px!important}
 .vyra-toplike:not(.like-center)>h3{margin-bottom:4px!important}
 
 /* Design 1 — Clean / left. Compact, transparent and OBS-friendly. */
 .vyra-toplike.like-clean{width:220px!important;max-width:220px!important;padding:4px 2px!important}
 .vyra-toplike.like-clean>h3{text-align:left!important;margin:0 0 4px 30px!important;font-size:10px!important;letter-spacing:2.4px!important}
-.vyra-toplike.like-clean>.toplike-list{gap:1px!important}
-.vyra-toplike.like-clean .toplike-row{width:max-content!important;min-width:148px!important;max-width:210px!important;height:40px!important;padding:1px 4px!important;background:transparent!important;border:0!important}
+.vyra-toplike.like-clean>.toplike-list{gap:6px!important}
+.vyra-toplike.like-clean .toplike-row{width:max-content!important;min-width:168px!important;max-width:230px!important;height:68px!important;padding:1px 4px!important;background:transparent!important;border:0!important}
 .vyra-toplike.like-clean .toplike-row>b{width:20px!important;height:20px!important;border-radius:6px!important;font-size:9px!important}
 .vyra-toplike.like-clean .toplike-row>img{width:32px!important;height:32px!important}
 .vyra-toplike.like-clean .toplike-row strong{font-size:9px!important}

@@ -1,7 +1,7 @@
 (function () {
   const RANKING_TYPES = ['templateTopLike', 'templateTopCoins', 'templateTopPoints'];
   const SKINS = [
-    ['royal-gold', 'Royal Gold'], ['neon', 'Neon'], ['galaxy', 'Galaxy'], ['ice', 'Ice'],
+    ['clean', 'Clean'], ['royal-gold', 'Royal Gold'], ['neon', 'Neon'], ['galaxy', 'Galaxy'], ['ice', 'Ice'],
     ['fire', 'Fire'], ['sakura', 'Sakura'], ['cyber', 'Cyber'], ['luxury', 'Luxury'],
     ['aurora', 'Aurora'], ['retro-crt', 'Retro CRT'], ['goldrush', 'Gold Rush'],
     ['prism', 'Prism'], ['arena', 'Arena']

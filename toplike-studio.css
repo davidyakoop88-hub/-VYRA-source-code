@@ -66,6 +66,7 @@
 .toplike-skin-swatch.skin-goldrush i{background:linear-gradient(135deg,#2a1704,#e8b64d)}
 .toplike-skin-swatch.skin-prism i{background:linear-gradient(115deg,#ff9df0,#8ef0ff,#c9a9ff)}
 .toplike-skin-swatch.skin-arena i{background:linear-gradient(180deg,#1a1a1f,#050506);box-shadow:inset 0 2px 0 #fff}
+.toplike-skin-swatch.skin-clean i{background:linear-gradient(135deg,#26262e,#3a3a44)}
 
 /* ---- Skin rendering on the live widget (colors/glow only — never layout, .like-clean/.like-center own that) ---- */
 .vyra-toplike.skin-royal-gold{border-color:#caa04a!important;box-shadow:0 0 22px #caa04a30!important}
@@ -141,6 +142,38 @@
 .vyra-toplike.skin-arena .toplike-row>b{background:var(--like)!important;color:#050506!important;border-radius:0!important;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);font-weight:800}
 .vyra-toplike.skin-arena .toplike-row em{color:var(--like)!important;font-weight:800}
 
+/* ---- Clean: minimal & modern — the third headline style. Thin border, no glow, flat neutral
+   badges. Deliberately the plainest skin so it reads as "minimal" next to Royal/Neon. ---- */
+.vyra-toplike.skin-clean{border-color:#35353d!important;box-shadow:none!important}
+.vyra-toplike.skin-clean>h3{color:#e8e8ec!important;text-shadow:none!important}
+.vyra-toplike.skin-clean .toplike-row>b{background:#2a2a30!important;color:#fff!important}
+.vyra-toplike.skin-clean .toplike-row em{color:var(--like)!important}
+
+/* ---- Royal Gold badge accent: small laurel-leaf flourishes flanking the rank number, giving the
+   "Elegant & Premium" headline style a distinguishing shape, not just a gold recolor. ---- */
+.vyra-toplike.skin-royal-gold .toplike-row>b{position:relative}
+.vyra-toplike.skin-royal-gold .toplike-row>b::before,
+.vyra-toplike.skin-royal-gold .toplike-row>b::after{content:"";position:absolute;top:50%;width:7px;height:11px;background:#caa04a;opacity:.85;transform:translateY(-50%)}
+.vyra-toplike.skin-royal-gold .toplike-row>b::before{left:-8px;clip-path:polygon(0 50%,100% 10%,100% 90%)}
+.vyra-toplike.skin-royal-gold .toplike-row>b::after{right:-8px;clip-path:polygon(100% 50%,0 10%,0 90%)}
+
+/* ---- Neon badge accent: hexagon rank badges + stronger glow for the "Vibrant & Glowing"
+   headline style, reusing the same clip-path idiom as the Arena skin. ---- */
+.vyra-toplike.skin-neon .toplike-row>b{border-radius:0!important;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+
+/* ---- Position: Höger (right) — mirror of the default left list: content+avatar hug the left,
+   rank badge trails on the right, whole row right-anchored so the group sits flush to the card's
+   right edge, matching Vänster's flush-left arrangement. ---- */
+.vyra-toplike.like-right .toplike-row,
+.vyra-toplike.like-right .toplike-row:has(>.pro-avatar-frame){grid-template-columns:minmax(90px,1fr) 58px 25px!important;justify-content:end!important;column-gap:5px!important;padding-right:4px!important}
+.vyra-toplike.like-right .toplike-row>b{grid-column:3!important;grid-row:1/4!important;justify-self:center!important;align-self:center!important;margin:0!important}
+.vyra-toplike.like-right .toplike-row>img,
+.vyra-toplike.like-right .toplike-row>.pro-avatar-frame{grid-column:2!important;grid-row:1/4!important;justify-self:center!important;align-self:center!important}
+.vyra-toplike.like-right .toplike-row>span:not(.pro-avatar-frame){grid-column:1!important;grid-row:2!important;justify-self:end!important;align-self:start!important;text-align:right!important}
+.vyra-toplike.like-right .toplike-row>span:not(.pro-avatar-frame)>strong{display:block}
+.vyra-toplike.like-right .toplike-row>em{grid-column:1!important;grid-row:3!important;justify-self:end!important;align-self:start!important;text-align:right!important}
+.vyra-toplike.like-right .toplike-crown{left:auto!important;right:63px!important;transform:translateX(50%) rotate(8deg)!important}
+
 /* ---- Automatic gold/silver/bronze medal ring for #1/#2/#3 ----
    Reuses the existing .pro-avatar-frame/.pro-frame-art structure and its grid/sizing CSS
    (studio.css) instead of inventing a new wrapper — that's the only combination the
@@ -152,7 +185,7 @@
    with a wide 1fr name column, so 50% of the whole row would center over the name text, not the
    avatar above it. ~53px lines up with both the no-frame (27px+7px gap+37px/2) and framed
    (25px+5px gap+48px/2) column layouts, which land within a couple px of each other. */
-.toplike-crown{position:absolute;top:-7px;left:53px;transform:translateX(-50%) rotate(-8deg);font-size:14px;font-style:normal;color:#ffd76a;text-shadow:0 0 8px #ffb02580;pointer-events:none;z-index:6}
+.toplike-crown{position:absolute;top:-7px;left:59px;transform:translateX(-50%) rotate(-8deg);font-size:14px;font-style:normal;color:#ffd76a;text-shadow:0 0 8px #ffb02580;pointer-events:none;z-index:6}
 
 /* ---- Entrance animations ---- */
 @keyframes wsFadeIn{from{opacity:0}to{opacity:1}}
