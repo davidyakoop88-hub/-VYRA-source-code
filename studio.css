@@ -219,18 +219,20 @@ html.overlay-output .resize-handle{display:none!important}
 .overlay-widget-gallery .widget-catalog button > b{display:block;padding:10px 12px 4px;font-size:11px;color:#fff}
 .overlay-widget-gallery .widget-catalog button b{font-size:11px;color:#fff}
 .overlay-widget-gallery .widget-catalog button small{font-size:8px;color:#8a7a95}
-.overlay-widget-gallery .widget-catalog button .owg-add{display:block;margin:8px 12px 12px;background:#e0345c;color:#fff;font-size:10px;font-weight:700;padding:8px;border-radius:8px;text-align:center}
+.overlay-widget-gallery .widget-catalog button .owg-add{display:block;margin:8px 12px 12px;background:linear-gradient(110deg,#e0345c,#ff5478);color:#fff;font-size:10px;font-weight:800;letter-spacing:.2px;padding:9px;border-radius:8px;text-align:center;box-shadow:0 3px 10px #e0345c40;transition:box-shadow .15s,transform .15s}
+.overlay-widget-gallery .widget-catalog button:hover .owg-add{box-shadow:0 4px 14px #e0345c66;transform:translateY(-1px)}
 .overlay-widget-gallery .widget-catalog button{position:relative!important}
 .overlay-widget-gallery .widget-catalog button .owg-star{position:absolute;top:6px;right:6px;z-index:10;width:22px;height:22px;display:flex!important;align-items:center;justify-content:center;background:#000a;border-radius:50%;color:#8a7a95;font-size:14px;padding:0}
 .overlay-widget-gallery .widget-catalog button .owg-star:hover{color:#ffd23c}
 .overlay-widget-gallery .widget-catalog button .owg-star-active{color:#ffd23c;text-shadow:0 0 6px #ffd23c}
 .overlay-widget-gallery .widget-catalog button .owg-actions{display:flex;flex-direction:column;gap:5px;padding:6px 12px 0}
 .overlay-widget-gallery .widget-catalog button .owg-action-row{display:flex;gap:5px}
-.overlay-widget-gallery .widget-catalog button .owg-action{display:block;text-align:center;padding:6px 4px;border-radius:6px;font-size:8px;font-weight:700}
-.overlay-widget-gallery .widget-catalog button .owg-configure{background:linear-gradient(110deg,#2d1740,#452656);border:1px solid #b13cff;color:#e3cdfa}
-.overlay-widget-gallery .widget-catalog button .owg-configure:hover{background:linear-gradient(110deg,#3a1e52,#5a2f6e)}
-.overlay-widget-gallery .widget-catalog button .owg-preview,.overlay-widget-gallery .widget-catalog button .owg-copylink{flex:1;background:#170c20;border:1px solid #2b2438;color:#cbb9d6}
-.overlay-widget-gallery .widget-catalog button .owg-preview:hover,.overlay-widget-gallery .widget-catalog button .owg-copylink:hover{border-color:#b13cff;color:#fff}
+.overlay-widget-gallery .widget-catalog button .owg-action{display:flex;align-items:center;justify-content:center;gap:4px;text-align:center;padding:7px 4px;border-radius:8px;font-size:8px;font-weight:700;letter-spacing:.2px;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.overlay-widget-gallery .widget-catalog button .owg-configure,.overlay-widget-gallery .widget-catalog button .owg-preview,.overlay-widget-gallery .widget-catalog button .owg-copylink{background:linear-gradient(110deg,#20122c,#2c1840);border:1px solid #5a3d74;color:#cbb9d6}
+.overlay-widget-gallery .widget-catalog button .owg-configure:hover,.overlay-widget-gallery .widget-catalog button .owg-preview:hover,.overlay-widget-gallery .widget-catalog button .owg-copylink:hover{background:linear-gradient(110deg,#2d1740,#3f2354);border-color:#b13cff;color:#fff}
+.overlay-widget-gallery .widget-catalog button .owg-configure{border-color:#b13cff;color:#e3cdfa;box-shadow:0 2px 8px #b13cff26}
+.overlay-widget-gallery .widget-catalog button .owg-configure:hover{box-shadow:0 2px 12px #b13cff4d}
+.overlay-widget-gallery .widget-catalog button .owg-preview,.overlay-widget-gallery .widget-catalog button .owg-copylink{flex:1}
 .elements:not(.catalog-open) .panel-title,.elements:not(.catalog-open) .catalog-notice,.elements:not(.catalog-open) .widget-search,.elements:not(.catalog-open) .widget-catalog{display:none}
 .live-layer-add{display:block;width:100%;margin-top:9px;padding:10px!important;background:#e0345c!important;border:0!important;border-radius:8px;color:#fff!important;font-size:9px!important;font-weight:800;letter-spacing:.3px;text-align:center;box-shadow:0 4px 14px #e0345c4d}
 .live-layer-add:hover{background:#f04070!important}
