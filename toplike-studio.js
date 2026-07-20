@@ -3,7 +3,8 @@
   const SKINS = [
     ['royal-gold', 'Royal Gold'], ['neon', 'Neon'], ['galaxy', 'Galaxy'], ['ice', 'Ice'],
     ['fire', 'Fire'], ['sakura', 'Sakura'], ['cyber', 'Cyber'], ['luxury', 'Luxury'],
-    ['aurora', 'Aurora'], ['retro-crt', 'Retro CRT'], ['goldrush', 'Gold Rush']
+    ['aurora', 'Aurora'], ['retro-crt', 'Retro CRT'], ['goldrush', 'Gold Rush'],
+    ['prism', 'Prism'], ['arena', 'Arena']
   ];
 
   // Avatar Frame library — real illustrated PNGs where a matching asset already exists in the repo
@@ -99,7 +100,7 @@
 
     const skin = w.skin || 'royal-gold';
     const skinGroup = `<div class="property-group"><h4>DESIGN · VÄLJ TEMA</h4><div class="toplike-skin-grid">${SKINS.map(([id, name]) => `<button type="button" data-ws-skin="${id}" class="toplike-skin-swatch skin-${id}${skin === id ? ' active' : ''}"><i></i><b>${name}</b></button>`).join('')}</div></div>`;
-    const animGroup = `<div class="property-group"><h4>ANIMATION</h4><label>Inträdeseffekt<select id="wsEntrance"><option value="none">Ingen</option><option value="fade">Tona in</option><option value="slideUp">Glid upp</option><option value="pop">Poppa in</option></select></label><label class="range-label">Varaktighet <b>${w.entranceDuration || 600} ms</b><input id="wsEntranceDuration" type="range" min="150" max="1500" step="50" value="${w.entranceDuration || 600}"></label><label class="range-label">Opacitet <b>${Math.round((w.opacity ?? 1) * 100)}%</b><input id="wsOpacity" type="range" min="10" max="100" value="${Math.round((w.opacity ?? 1) * 100)}"></label></div>`;
+    const animGroup = `<div class="property-group"><h4>ANIMATION</h4><label>Inträdeseffekt<select id="wsEntrance"><option value="none">Ingen</option><option value="fade">Tona in</option><option value="slideUp">Glid upp</option><option value="pop">Poppa in</option><option value="signal">Signal</option><option value="gilded">Gyllene</option></select></label><label class="range-label">Varaktighet <b>${w.entranceDuration || 600} ms</b><input id="wsEntranceDuration" type="range" min="150" max="1500" step="50" value="${w.entranceDuration || 600}"></label><label class="range-label">Opacitet <b>${Math.round((w.opacity ?? 1) * 100)}%</b><input id="wsOpacity" type="range" min="10" max="100" value="${Math.round((w.opacity ?? 1) * 100)}"></label></div>`;
 
     out = out.replace('<div class="property-group"><h4>POSITION', skinGroup + animGroup + '<div class="property-group"><h4>POSITION');
     return out;
