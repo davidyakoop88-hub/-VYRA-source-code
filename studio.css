@@ -237,3 +237,18 @@ html.overlay-output .resize-handle{display:none!important}
 .layer-eye{color:#7dffb4!important}
 .is-hidden .layer-eye{color:#e0a8b8!important}
 .layer-delete{color:#ff8fa3!important}
+.owg-configure-modal{position:fixed;inset:0;z-index:999;background:#05030add;display:grid;grid-template-columns:1fr 360px;grid-template-rows:1fr auto;gap:0;padding:0}
+.owg-configure-panel{grid-column:1/2;grid-row:1/2;overflow:hidden;display:flex;flex-direction:column;background:#0d0714;border-right:1px solid var(--line,#2b2438)}
+.owg-configure-panel>header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--line,#2b2438);background:#110a18}
+.owg-configure-panel>header h3{margin:0;font:600 15px Manrope;color:#fff}
+.owg-configure-close{background:#211230;border:1px solid #452656;color:#fff;width:30px;height:30px;border-radius:8px;font-size:16px;line-height:1}
+.owg-configure-close:hover{border-color:#b13cff}
+.owg-configure-settings{flex:1;overflow-y:auto;padding:18px 22px}
+.owg-configure-preview{grid-column:2/3;grid-row:1/2;background:#0a0710;border-left:1px solid var(--line,#2b2438);padding:20px;overflow-y:auto}
+.owg-configure-preview h4{margin:0 0 12px;font-size:11px;letter-spacing:.4px;color:#b490ff}
+.owg-configure-preview-stage{position:relative;min-height:220px;background:#050308;border:1px solid #2b2438;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.owg-configure-preview-stage .widget{position:relative!important;left:auto!important;top:auto!important;margin:0 auto!important;pointer-events:none!important}
+.owg-configure-preview-stage .resize-handle{display:none!important}
+.owg-configure-done{grid-column:1/3;grid-row:2/3;margin:0;border:0;border-radius:0;padding:16px;background:#211230;border-top:1px solid #452656;color:#fff;font-size:12px;font-weight:700}
+.owg-configure-done:hover{background:#2d1740}
+@media(max-width:900px){.owg-configure-modal{grid-template-columns:1fr}.owg-configure-preview{display:none}}

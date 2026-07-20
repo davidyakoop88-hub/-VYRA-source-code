@@ -139,7 +139,7 @@ function styleOverlayCatalogCards() {
       e.stopPropagation();
       originalClick.call(btn, e);
       overlayPreviewWidgetId = selected;
-      go('editor');
+      openConfigureModal(selected);
     };
 
     const previewBtn = document.createElement('span');
@@ -191,8 +191,71 @@ function bindOverlayPreview() {
   styleOverlayCatalogCards();
 }
 
+// The Configure modal: the widget is already added (selected === owgConfigureWidgetId) by the
+// time this opens, so this reuses the SAME props()/wh() functions Layout's own properties panel
+// uses — no per-widget settings UI to duplicate. The tricky part is that every existing bind()
+// wrap across ~14 files gates its input-wiring on `view==='editor'`, and this modal is shown while
+// view is still 'overlay'. Rather than touch every one of those files, bindConfigureModal()
+// briefly flips the global `view` to 'editor' (a plain variable, not tied to which DOM is visible)
+// so that existing chain runs and finds this modal's inputs by the same ids it always looks for
+// (#propX, #dataColor, etc.), then flips it back — the modal's own DOM is untouched by that,
+// since render() only ever rewrites #view's contents and this modal lives outside of it.
+let owgConfigureWidgetId = null;
+
+function openConfigureModal(widgetId) {
+  owgConfigureWidgetId = widgetId;
+  renderConfigureModal();
+}
+
+function closeConfigureModal() {
+  owgConfigureWidgetId = null;
+  document.querySelector('.owg-configure-modal')?.remove();
+  render();
+}
+
+function renderConfigureModal() {
+  const w = state.widgets.find(x => x.id === owgConfigureWidgetId);
+  if (!w) { closeConfigureModal(); return; }
+  let modal = document.querySelector('.owg-configure-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.className = 'owg-configure-modal';
+    document.body.append(modal);
+  }
+  modal.innerHTML = `<div class="owg-configure-panel">
+    <header><h3>Configure ${liveLayerName(w)}</h3><button class="owg-configure-close" type="button">×</button></header>
+    <div class="owg-configure-settings properties">${props()}</div>
+  </div>
+  <div class="owg-configure-preview">
+    <h4>PREVIEW</h4>
+    <div class="owg-configure-preview-stage">${wh(w)}</div>
+  </div>
+  <button class="owg-configure-done" type="button">Close</button>
+  <button id="testEvent" hidden></button><button id="saveProject" hidden></button>`;
+  modal.querySelector('.owg-configure-close').onclick = closeConfigureModal;
+  modal.querySelector('.owg-configure-done').onclick = closeConfigureModal;
+  bindConfigureModal();
+}
+
+// studio.js's base bind() unconditionally wires #testEvent/#saveProject (the Layout
+// toolbar buttons) whenever view==='editor', with no null-check — since this modal
+// never renders the real Layout DOM, those two hidden dummy buttons above exist purely
+// so that unguarded access doesn't throw and abort the rest of the bind() chain before
+// it reaches each widget's own settings wiring (e.g. heartGoalBind).
+function bindConfigureModal() {
+  if (!owgConfigureWidgetId) return;
+  const realView = view;
+  view = 'editor';
+  try { bind(); } finally { view = realView; }
+}
+
 const overlayPreviewRender = render;
 render = function () {
+  // While the Configure modal is open, only refresh the modal itself — the gallery behind it is
+  // hidden anyway, and rebuilding all 52 cards' thumbnails on every settings tweak inside the
+  // modal would be pure waste. closeConfigureModal() calls render() again once it's gone, which
+  // brings the (by-then-visible) Overlay view back in sync in one go.
+  if (owgConfigureWidgetId) { renderConfigureModal(); return; }
   if (view === 'overlay') {
     $('#view').innerHTML = overlayPreviewHtml();
     $('#title').textContent = 'Overlay';
