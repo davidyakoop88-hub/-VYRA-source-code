@@ -88,7 +88,7 @@ function styleOverlayCatalogCards() {
 
     const add = document.createElement('span');
     add.className = 'owg-add';
-    add.textContent = '+ Lägg till';
+    add.textContent = '+ Lägg till i Layout';
     btn.append(add);
 
     btn.onclick = function (e) {
