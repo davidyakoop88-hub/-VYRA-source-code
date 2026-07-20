@@ -57,7 +57,7 @@
     // Skip the auto crown glyph when a custom illustrated frame is chosen - several frames (e.g.
     // golden-king) already have their own crown/regal motif baked into the art, so the separate ♛
     // badge just clutters the gap between the photo and the frame instead of adding anything.
-    if (w.showCrown !== false && (!w.profileFrame || w.profileFrame === 'none')) html = html.replace('rank-1"><b>1</b>', 'rank-1"><i class="toplike-crown">♛</i><b>1</b>');
+    if (w.showCrown === true && (!w.profileFrame || w.profileFrame === 'none')) html = html.replace('rank-1"><b>1</b>', 'rank-1"><i class="toplike-crown">♛</i><b>1</b>');
 
     // Automatic gold/silver/bronze medal ring for #1/#2/#3 — only when no custom Avatar Frame is chosen,
     // so the explicit frame picker (proTopLikeFrameBind/premiumProfileFramesBind) still wins when used.
@@ -89,7 +89,7 @@
 
     let out = html.replace(
       /(<input id="likeShowTitle"[^>]*>\s*Rubrik<\/label>)(<\/div>)/,
-      `$1<label><input id="wsShowCrown" type="checkbox" ${w.showCrown === false ? '' : 'checked'}> Krona</label><label><input id="wsAutoMedal" type="checkbox" ${w.autoMedal === false ? '' : 'checked'}> Medaljring #1-3</label>$2`
+      `$1<label><input id="wsShowCrown" type="checkbox" ${w.showCrown === true ? 'checked' : ''}> Krona</label><label><input id="wsAutoMedal" type="checkbox" ${w.autoMedal === false ? '' : 'checked'}> Medaljring #1-3</label>$2`
     );
 
     const liveMetric = w.liveMetric || (w.type === 'templateTopCoins' ? 'coins' : 'likes');
