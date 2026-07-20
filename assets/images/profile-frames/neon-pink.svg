@@ -5,6 +5,11 @@
       <stop offset="1" stop-color="#ff8ad1"/>
     </linearGradient>
   </defs>
-  <circle cx="100" cy="100" r="83" fill="none" stroke="url(#g)" stroke-width="15"/>
-  <circle cx="100" cy="100" r="83" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="2"/>
+  <circle cx="100" cy="100" r="80" fill="none" stroke="url(#g)" stroke-width="6" stroke-dasharray="16 10"/>
+  <g fill="url(#g)">
+    <path d="M100 2 L110 18 L90 18 Z"/>
+    <path d="M100 2 L110 18 L90 18 Z" transform="rotate(90 100 100)"/>
+    <path d="M100 2 L110 18 L90 18 Z" transform="rotate(180 100 100)"/>
+    <path d="M100 2 L110 18 L90 18 Z" transform="rotate(270 100 100)"/>
+  </g>
 </svg>

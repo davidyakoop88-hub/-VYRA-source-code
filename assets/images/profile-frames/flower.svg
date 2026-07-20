@@ -5,6 +5,11 @@
       <stop offset="1" stop-color="#9be89a"/>
     </linearGradient>
   </defs>
-  <circle cx="100" cy="100" r="83" fill="none" stroke="url(#g)" stroke-width="15"/>
-  <circle cx="100" cy="100" r="83" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="2"/>
+  <circle cx="100" cy="100" r="80" fill="none" stroke="url(#g)" stroke-width="4" stroke-opacity="0.5"/>
+  <g fill="url(#g)">
+    <ellipse cx="100" cy="16" rx="12" ry="18"/>
+    <ellipse cx="100" cy="16" rx="12" ry="18" transform="rotate(90 100 100)"/>
+    <ellipse cx="100" cy="16" rx="12" ry="18" transform="rotate(180 100 100)"/>
+    <ellipse cx="100" cy="16" rx="12" ry="18" transform="rotate(270 100 100)"/>
+  </g>
 </svg>
