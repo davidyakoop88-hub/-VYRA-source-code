@@ -237,6 +237,10 @@ input:focus, select:focus, textarea:focus {
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
 .search-input { position: relative; }
+.search-input svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;
+}
 .search-input input { padding-left: 36px; }
 
 /* ==========================================================================
