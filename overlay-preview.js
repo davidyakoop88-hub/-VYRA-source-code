@@ -267,3 +267,12 @@ render = function () {
 };
 const overlayPreviewBind = bind;
 bind = function () { overlayPreviewBind(); if (view === 'overlay') bindOverlayPreview(); };
+
+// Replaces studio.js's plain "Välj ett element på canvas." placeholder (a bare <p>, styled like
+// nothing in the panel) with an empty-state that actually matches the rest of the properties panel.
+const overlayPreviewProps = props;
+props = function () {
+  const h = overlayPreviewProps();
+  if (h === '<p>Välj ett element på canvas.</p>') return '<div class="properties-empty">Klicka på en widget i LIVE-LAGER eller på canvasen för att redigera den.</div>';
+  return h;
+};
