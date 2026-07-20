@@ -1,25 +1,40 @@
 // Overlay tab: what's currently visible on the live output, a live preview of the widget you
-// just added, plus the full widget catalog as add-to-layout cards — each card showing a real
-// scaled-down render of that widget (via wh(), the exact function the real canvas uses) instead
-// of a generic icon, so the gallery actually looks like what you're about to add.
+// just added (or are just previewing), plus the full widget catalog as cards — each showing a
+// real scaled-down render of that widget (via wh(), the exact function the real canvas uses)
+// instead of a generic icon, with Preview/Configure/Copy link/favorite actions per card.
 
 let overlayPreviewWidgetId = null;
+let overlayDraftPreviewHtml = null;
+let overlayDraftPreviewName = null;
+
+const OWG_FAV_KEY = 'vyra-favorite-widgets';
+function owgGetFavorites() {
+  try { return new Set(JSON.parse(localStorage.getItem(OWG_FAV_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function owgSaveFavorites(set) { localStorage.setItem(OWG_FAV_KEY, JSON.stringify([...set])); }
+
+function owgOverlayUrl() {
+  return location.protocol === 'file:' ? 'http://127.0.0.1:4173/overlay.html' : new URL('overlay.html', location.href).href;
+}
 
 function overlayPreviewHtml() {
   const visibleWidgets = state.widgets.filter(w => !w.hidden);
   const previewWidget = state.widgets.find(w => w.id === overlayPreviewWidgetId);
+  const stageHtml = overlayDraftPreviewHtml || (previewWidget ? wh(previewWidget) : null);
+  const stageName = overlayDraftPreviewHtml ? overlayDraftPreviewName : (previewWidget ? liveLayerName(previewWidget) : null);
   return `<div class="section-head"><div><h2>Overlay</h2><p>Widgets du lägger till här dyker upp direkt i din layout.</p></div></div>
   <div class="overlay-preview-sidebar">
     <h4>VAD SOM VISAS NU · ${visibleWidgets.length}</h4>
     <div class="overlay-widget-list">${visibleWidgets.length ? visibleWidgets.map(w => `<article><i>◇</i><span>${liveLayerName(w)}</span></article>`).join('') : '<p>Inga widgets är synliga just nu.</p>'}</div>
   </div>
-  ${previewWidget ? `<div class="overlay-live-preview">
-    <h4>SÅ HÄR SER DEN UT · ${liveLayerName(previewWidget)}</h4>
-    <div class="overlay-live-preview-stage">${wh(previewWidget)}</div>
+  ${stageHtml ? `<div class="overlay-live-preview">
+    <h4>SÅ HÄR SER DEN UT · ${stageName}</h4>
+    <div class="overlay-live-preview-stage">${stageHtml}</div>
   </div>` : ''}
   <div class="overlay-widget-gallery">
     <h4>ALLA WIDGETS</h4>
-    <p>Klicka på en widget för att lägga till den i din layout.</p>
+    <p>Klicka på en widget för att lägga till den i din layout, eller använd Preview/Configure/länk-knapparna på kortet.</p>
     <input class="widget-search" placeholder="Sök widget...">
     <div class="widget-catalog"></div>
   </div>`;
@@ -37,17 +52,17 @@ function overlayCatalogPreviewHtml(originalClick) {
   const savedSelected = selected, savedPreviewId = overlayPreviewWidgetId;
   const realRender = render, realToast = toast;
   render = () => {}; toast = () => {};
-  let html = null;
+  let html = null, name = null;
   try {
     originalClick();
     const w = state.widgets.find(x => x.id === selected);
-    if (w) html = wh(w);
+    if (w) { html = wh(w); name = liveLayerName(w); }
   } catch (e) { /* leave html null, card falls back to its plain icon */ }
   state.widgets = savedWidgets;
   selected = savedSelected;
   overlayPreviewWidgetId = savedPreviewId;
   render = realRender; toast = realToast;
-  return html;
+  return { html, name };
 }
 
 function scaleThumbnailToFit(thumb) {
@@ -59,14 +74,28 @@ function scaleThumbnailToFit(thumb) {
   inner.style.transform = `translate(-50%,-50%) scale(${scale})`;
 }
 
+// A stable per-card key for favorites — derived from the rendered name + its section heading,
+// since the underlying catalog buttons don't share one consistent dataset attribute across the
+// ~14 files that inject them (data-mvp-style, data-theme-template, data-ranking, etc.).
+function owgCardKey(btn) {
+  const clone = btn.cloneNode(true);
+  clone.querySelector('.owg-thumb')?.remove();
+  clone.querySelectorAll('.owg-add,.owg-actions,.owg-star').forEach(el => el.remove());
+  const name = clone.querySelector('b')?.textContent?.trim() || clone.textContent.trim();
+  const section = btn.closest('section')?.querySelector('h4')?.textContent?.trim() || '';
+  return section + '::' + name;
+}
+
 // Sections/buttons here are the same catalog markup Layout uses (media.js/toplike-studio.js/
 // last-x-alerts.js/custom-widgets.js/gift-fireworks.js all inject into any .widget-catalog they find).
-// Clicking a card still pushes straight into state.widgets like it always has — we just also
-// remember which widget was just added so overlayPreviewHtml() can render it live, and generate
-// a one-time real-render thumbnail for the card itself.
+// Clicking the card body still pushes straight into state.widgets like it always has. The extra
+// actions (Preview/Configure/Copy link/star) are separate <span>s with stopPropagation — real
+// nested <button> tags aren't valid inside the catalog's own <button>, so these stay non-button
+// elements with click handlers, matching the .owg-add convention already established here.
 function styleOverlayCatalogCards() {
   const gallery = document.querySelector('.overlay-widget-gallery .widget-catalog');
   if (!gallery) return;
+  const favorites = owgGetFavorites();
   let generatedAny = false;
   gallery.querySelectorAll('button').forEach(btn => {
     if (btn.dataset.owgWrapped) return;
@@ -74,7 +103,7 @@ function styleOverlayCatalogCards() {
     const originalClick = btn.onclick;
     if (!originalClick) return;
 
-    const thumbHtml = overlayCatalogPreviewHtml(originalClick);
+    const { html: thumbHtml, name: widgetName } = overlayCatalogPreviewHtml(originalClick);
     generatedAny = true;
     if (thumbHtml) {
       const icon = btn.querySelector('i');
@@ -86,6 +115,62 @@ function styleOverlayCatalogCards() {
       scaleThumbnailToFit(thumb);
     }
 
+    const key = owgCardKey(btn);
+    const star = document.createElement('span');
+    star.className = 'owg-star' + (favorites.has(key) ? ' owg-star-active' : '');
+    star.textContent = favorites.has(key) ? '★' : '☆';
+    star.title = 'Favorit';
+    star.onclick = e => {
+      e.stopPropagation();
+      const favs = owgGetFavorites();
+      if (favs.has(key)) { favs.delete(key); star.classList.remove('owg-star-active'); star.textContent = '☆'; }
+      else { favs.add(key); star.classList.add('owg-star-active'); star.textContent = '★'; }
+      owgSaveFavorites(favs);
+    };
+    btn.prepend(star);
+
+    const actions = document.createElement('div');
+    actions.className = 'owg-actions';
+
+    const configureBtn = document.createElement('span');
+    configureBtn.className = 'owg-action owg-configure';
+    configureBtn.textContent = '⚙ Configure';
+    configureBtn.onclick = e => {
+      e.stopPropagation();
+      originalClick.call(btn, e);
+      overlayPreviewWidgetId = selected;
+      go('editor');
+    };
+
+    const previewBtn = document.createElement('span');
+    previewBtn.className = 'owg-action owg-preview';
+    previewBtn.textContent = '▶ Preview';
+    previewBtn.onclick = e => {
+      e.stopPropagation();
+      const fresh = overlayCatalogPreviewHtml(originalClick);
+      overlayDraftPreviewHtml = fresh.html;
+      overlayDraftPreviewName = fresh.name;
+      overlayPreviewWidgetId = null;
+      render();
+    };
+
+    const linkBtn = document.createElement('span');
+    linkBtn.className = 'owg-action owg-copylink';
+    linkBtn.textContent = '🔗 Länk';
+    linkBtn.title = 'Kopierar länken till hela overlayn (widgets har ingen egen enskild länk — alla visas i samma overlay)';
+    linkBtn.onclick = async e => {
+      e.stopPropagation();
+      const url = owgOverlayUrl();
+      try { await navigator.clipboard.writeText(url); toast('Overlaylänk kopierad'); }
+      catch { toast('Kunde inte kopiera länken'); }
+    };
+
+    const row = document.createElement('div');
+    row.className = 'owg-action-row';
+    row.append(previewBtn, linkBtn);
+    actions.append(configureBtn, row);
+    btn.append(actions);
+
     const add = document.createElement('span');
     add.className = 'owg-add';
     add.textContent = '+ Lägg till i Layout';
@@ -94,6 +179,8 @@ function styleOverlayCatalogCards() {
     btn.onclick = function (e) {
       originalClick.call(btn, e);
       overlayPreviewWidgetId = selected;
+      overlayDraftPreviewHtml = null;
+      overlayDraftPreviewName = null;
       render();
     };
   });
