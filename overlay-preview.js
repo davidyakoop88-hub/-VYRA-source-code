@@ -23,19 +23,20 @@ function overlayPreviewHtml() {
   const previewWidget = state.widgets.find(w => w.id === overlayPreviewWidgetId);
   const stageHtml = overlayDraftPreviewHtml || (previewWidget ? wh(previewWidget) : null);
   const stageName = overlayDraftPreviewHtml ? overlayDraftPreviewName : (previewWidget ? liveLayerName(previewWidget) : null);
-  return `<div class="section-head"><div><h2>Overlay</h2><p>Widgets du lägger till här dyker upp direkt i din layout.</p></div></div>
+  const emptyStateIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>';
+  return `<div class="page-header section-head"><div><h2>Overlay</h2><p>Widgets du lägger till här dyker upp direkt i din layout.</p></div></div>
   <div class="overlay-preview-sidebar">
-    <h4>VAD SOM VISAS NU · ${visibleWidgets.length}</h4>
-    <div class="overlay-widget-list">${visibleWidgets.length ? visibleWidgets.map(w => `<article><i>◇</i><span>${liveLayerName(w)}</span></article>`).join('') : '<p>Inga widgets är synliga just nu.</p>'}</div>
+    <span class="section-header-eyebrow">Vad som visas nu · ${visibleWidgets.length}</span>
+    <div class="overlay-widget-list">${visibleWidgets.length ? visibleWidgets.map(w => `<article><i>◇</i><span>${liveLayerName(w)}</span></article>`).join('') : `<div class="empty-state">${emptyStateIcon}<h3>Inga widgets ännu</h3><p>Lägg till en widget från katalogen nedan så visas den här direkt.</p></div>`}</div>
   </div>
   ${stageHtml ? `<div class="overlay-live-preview">
-    <h4>SÅ HÄR SER DEN UT · ${stageName}</h4>
+    <span class="section-header-eyebrow">Så här ser den ut · ${stageName}</span>
     <div class="overlay-live-preview-stage">${stageHtml}</div>
   </div>` : ''}
   <div class="overlay-widget-gallery">
-    <h4>ALLA WIDGETS</h4>
+    <span class="section-header-eyebrow">Alla widgets</span>
     <p>Klicka på en widget för att lägga till den i din layout, eller använd Preview/Configure/länk-knapparna på kortet.</p>
-    <input class="widget-search" placeholder="Sök widget...">
+    <div class="search-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="widget-search" placeholder="Sök widget..."></div>
     <div class="widget-catalog"></div>
   </div>`;
 }
@@ -117,7 +118,7 @@ function styleOverlayCatalogCards() {
 
     const key = owgCardKey(btn);
     const star = document.createElement('span');
-    star.className = 'owg-star' + (favorites.has(key) ? ' owg-star-active' : '');
+    star.className = 'btn btn-icon btn-ghost owg-star' + (favorites.has(key) ? ' owg-star-active' : '');
     star.textContent = favorites.has(key) ? '★' : '☆';
     star.title = 'Favorit';
     star.onclick = e => {
@@ -133,7 +134,7 @@ function styleOverlayCatalogCards() {
     actions.className = 'owg-actions';
 
     const configureBtn = document.createElement('span');
-    configureBtn.className = 'owg-action owg-configure';
+    configureBtn.className = 'btn btn-secondary btn-sm owg-configure';
     configureBtn.textContent = '⚙ Configure';
     configureBtn.onclick = e => {
       e.stopPropagation();
@@ -143,7 +144,7 @@ function styleOverlayCatalogCards() {
     };
 
     const previewBtn = document.createElement('span');
-    previewBtn.className = 'owg-action owg-preview';
+    previewBtn.className = 'btn btn-secondary btn-sm owg-preview';
     previewBtn.textContent = '▶ Preview';
     previewBtn.onclick = e => {
       e.stopPropagation();
@@ -155,8 +156,8 @@ function styleOverlayCatalogCards() {
     };
 
     const linkBtn = document.createElement('span');
-    linkBtn.className = 'owg-action owg-copylink';
-    linkBtn.textContent = '🔗 Länk';
+    linkBtn.className = 'btn btn-icon btn-ghost owg-copylink';
+    linkBtn.textContent = '🔗';
     linkBtn.title = 'Kopierar länken till hela overlayn (widgets har ingen egen enskild länk — alla visas i samma overlay)';
     linkBtn.onclick = async e => {
       e.stopPropagation();
@@ -172,7 +173,7 @@ function styleOverlayCatalogCards() {
     btn.append(actions);
 
     const add = document.createElement('span');
-    add.className = 'owg-add';
+    add.className = 'btn btn-primary owg-add';
     add.textContent = '+ Lägg till i Layout';
     btn.append(add);
 
@@ -219,18 +220,18 @@ function renderConfigureModal() {
   let modal = document.querySelector('.owg-configure-modal');
   if (!modal) {
     modal = document.createElement('div');
-    modal.className = 'owg-configure-modal';
+    modal.className = 'owg-configure-modal modal-backdrop';
     document.body.append(modal);
   }
   modal.innerHTML = `<div class="owg-configure-panel">
-    <header><h3>Configure ${liveLayerName(w)}</h3><button class="owg-configure-close" type="button">×</button></header>
+    <header><h3>Configure ${liveLayerName(w)}</h3><button class="btn btn-icon btn-ghost owg-configure-close" type="button">×</button></header>
     <div class="owg-configure-settings properties">${props()}</div>
   </div>
   <div class="owg-configure-preview">
-    <h4>PREVIEW</h4>
+    <span class="section-header-eyebrow">Preview</span>
     <div class="owg-configure-preview-stage">${wh(w)}</div>
   </div>
-  <button class="owg-configure-done" type="button">Close</button>
+  <button class="btn btn-primary owg-configure-done" type="button">Close</button>
   <button id="testEvent" hidden></button><button id="saveProject" hidden></button>`;
   modal.querySelector('.owg-configure-close').onclick = closeConfigureModal;
   modal.querySelector('.owg-configure-done').onclick = closeConfigureModal;
