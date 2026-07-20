@@ -291,3 +291,16 @@ html.overlay-output .resize-handle{display:none!important}
 .lf-label-count{font:800 1.05em Manrope,sans-serif;color:var(--gold,#e8b968)}
 .lf-label-dot{font-style:normal;color:var(--gold,#e8b968);opacity:.6}
 .like-fountain.lf-paused .lf-p,.like-fountain.lf-paused .lf-avatar-wrap,.like-fountain.lf-paused .lf-orbit,.like-fountain.lf-paused .lf-orbit-heart,.like-fountain.lf-paused .lf-ring circle{animation-play-state:paused!important}
+
+/* Like Fountain — preset theme selector */
+.lf-preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+.lf-preset-card{position:relative;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:12px;border:1px solid var(--border-subtle,#2b2438);background:linear-gradient(145deg,var(--surface-1,#130b1c),#0d0814);cursor:pointer;text-align:left;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.lf-preset-card:hover{transform:translateY(-2px);border-color:var(--border-active,#b13cff);box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.lf-preset-card.selected{border-color:var(--border-active,#b13cff);box-shadow:0 0 0 1px var(--border-active,#b13cff),0 8px 22px rgba(177,60,255,.28)}
+.lf-preset-preview{position:relative;width:100%;height:60px;overflow:hidden;border-radius:8px;background:#0a0510}
+.lf-preset-preview .lf-p{bottom:6px}
+.lf-preset-glow{position:absolute;left:50%;bottom:5px;width:12px;height:12px;border-radius:50%;transform:translateX(-50%);animation:lfAvatarPulse 3s ease-in-out infinite}
+.lf-preset-name{font:600 9.5px Inter,sans-serif;color:var(--text-secondary,#b8aac8);letter-spacing:.01em}
+.lf-preset-card.selected .lf-preset-name{color:var(--text-primary,#f7f2ff)}
+.lf-preset-check{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:var(--border-active,#b13cff);color:#fff;font-style:normal;font-size:10px;line-height:16px;text-align:center;opacity:0;transform:scale(.5);transition:opacity .15s ease,transform .15s ease;box-shadow:0 0 8px rgba(177,60,255,.6)}
+.lf-preset-card.selected .lf-preset-check{opacity:1;transform:scale(1)}
