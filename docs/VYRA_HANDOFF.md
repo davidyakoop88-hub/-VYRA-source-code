@@ -49,19 +49,30 @@ Expected: `262/262` as of the latest commit on this branch. Or open
 ## What's done
 
 See `VYRA_PROJECT_STATE.md` → "Completed systems". In short: the full widget/theme catalog,
-the design-system migration, the VFX Engine (M1/M2/hardening/visual QA), and the full
-Recognition Engine including the standalone Recognition Runtime (Roadmap Phase 1, commit
-`540eaac`), Runtime Hardening (Phase 2, commit `f022cf0`), and the Generic Live Event Adapter
-Contract (Phase 3, `recognition-adapter.js`/`recognition-adapter-types.js`/
-`recognition-adapter-demo.html`).
+the design-system migration, the VFX Engine (M1/M2/hardening/visual QA), the full Recognition
+Engine including the standalone Recognition Runtime (Roadmap Phase 1, commit `540eaac`),
+Runtime Hardening (Phase 2, commit `f022cf0`), the Generic Live Event Adapter Contract (Phase
+3, commit `e670003`), and — under the **2026-07-22 re-prioritized roadmap** (premium widget
+system, not TikTok/SaaS, is now the near-term goal; see `VYRA_MASTER_ROADMAP.md`) — the
+**Premium Widget Design System** (Phase 4: `premium-widget-core.js`,
+`premium-widget-tokens.css`, `premium-widget-assets.js`, `premium-widget-demo.html`,
+`docs/PREMIUM_WIDGET_SPEC.md`). A separate, additive rendering system from
+`recognition-card.js` — 4 visually distinct widget families (Crystal Halo, Royal Crown,
+Legendary Portal, Elite Minimal), see `VYRA_ARCHITECTURE.md` §10.
 
 ## What's next
 
-`VYRA_PROJECT_STATE.md` → "Exact next action": **Phase 4 — TikTok LIVE Adapter**. Inspect the
-existing transport (`tiktok-bridge/bridge.js` + `server.ps1` + `live-client.js`) before
-writing code; build `tiktok-live-adapter.js` (registers a `'tiktok'` provider against the
-Phase 3 adapter contract) and `tiktok-live-normalizer.js` (TikTok payload → NormalizedEvent),
-with a simulation mode for development without a live session.
+`VYRA_PROJECT_STATE.md` → "Exact next action": **Phase 5 — Premium Gift Widget**. Build the
+first real event-driven widget on the Phase 4 foundation via
+`window.VyraPremiumWidget.show(model)`, mapping real gift tiers to family/tier choices. Does
+not touch `recognition-card.js`/`media.js`/any existing widget.
+
+**Full new phase order** (see `VYRA_MASTER_ROADMAP.md` for details): Phase 4 Premium Widget
+Design System (done) → 5 Premium Gift Widget → 6 Top Gifter Widget → 7 MVP Reveal Widget → 8
+Natural Like Fountain → 9 Match Widgets (X2/X3/Glove/Booster) → 10 Premium Widget Overlay
+Integration → 11 TikTok LIVE Adapter → 12 OBS/TikTok LIVE Studio Validation. Billing,
+analytics, campaigns, AI, account/workspace, and general SaaS expansion are explicitly
+deferred — do not start any of that without the user re-prioritizing it again.
 
 ## Rules this project follows (do not violate these when continuing)
 
@@ -103,6 +114,10 @@ If starting a fresh session to continue this work, paste:
 > `docs/VYRA_MASTER_ROADMAP.md`, `docs/VYRA_ARCHITECTURE.md`, and `docs/VYRA_HANDOFF.md`
 > first. Do not assume any file/API exists — verify against the actual repository at
 > `C:\Users\A\Desktop\vyra\VYRA-source-code-2026-07-14` on branch `feature/vyra-vfx-engine`.
-> Follow the working rules listed in `VYRA_HANDOFF.md`. Complete Phase 4 (TikTok LIVE
-> Adapter), run tests, commit with message `feat(tiktok): connect live events to recognition
-> runtime`, update the four project-management docs, then continue to Phase 5.
+> Follow the working rules listed in `VYRA_HANDOFF.md`. Note the 2026-07-22
+> re-prioritization: the near-term roadmap is the premium widget system (Phases 4-12), not
+> TikTok/SaaS work — do not start billing/analytics/campaigns/AI/accounts/workspaces without
+> the user re-prioritizing again. Complete Phase 5 (Premium Gift Widget), building on
+> `premium-widget-core.js`/`docs/PREMIUM_WIDGET_SPEC.md` from Phase 4, run any available
+> tests/manual verification, commit with message `feat(widgets): add premium gift widget`,
+> update the project-management docs, then continue to Phase 6.

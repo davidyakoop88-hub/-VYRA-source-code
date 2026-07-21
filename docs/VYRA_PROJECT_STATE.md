@@ -1,6 +1,12 @@
 # VYRA Project State
 
-Last updated: 2026-07-22 (Phase 3 — Generic Live Event Adapter Contract).
+Last updated: 2026-07-22 (Phase 4 — Premium Widget Design System).
+
+**2026-07-22 re-prioritization**: the user redirected the roadmap's Phase 4 onward away from
+TikTok/overlay-runtime/SaaS work toward the premium live overlay widget system (see
+`VYRA_MASTER_ROADMAP.md`'s reprioritization note and "Deferred" section). Phases 0-3 below are
+unaffected. The commit `e670003` (Phase 3) is the last commit under the old ordering; every
+commit after it follows the new Phase 4-12 sequence.
 
 ## Current branch
 
@@ -8,8 +14,9 @@ Last updated: 2026-07-22 (Phase 3 — Generic Live Event Adapter Contract).
 
 ## Latest verified commit
 
-Phase 3 (Generic Live Event Adapter Contract) commit — see git log for exact SHA after push.
-Prior verified commits: `f022cf0` (Phase 2, `fix(recognition): harden runtime lifecycle and
+Phase 4 (Premium Widget Design System) commit — see git log for exact SHA after push.
+Prior verified commits: `e670003` (Phase 3, `feat(recognition): add generic live event
+adapter contract`), `f022cf0` (Phase 2, `fix(recognition): harden runtime lifecycle and
 failure handling`), `21cffb8` (Phase 0 docs), `540eaac` (Phase 1,
 `feat(recognition): add standalone recognition runtime`). Local HEAD confirmed equal to
 `origin/feature/vyra-vfx-engine` after each push.
@@ -79,26 +86,73 @@ this roadmap, left untouched).
   (`queued`) → tick → presentation starts → Card renders ("David Yakoop joined the live") →
   tick-to-end → clean completion; malformed event rejected without crash; unexpected
   disconnect handled cleanly with no auto-reconnect (demo's reconnect policy left disabled).
-- **Phase 4 — TikTok LIVE adapter**: not started as a Recognition-Runtime-facing adapter.
-  The **transport** already exists and works (`tiktok-bridge/bridge.js` →
-  `tiktok-live-connector` → `server.ps1` → `live-client.js`), but nothing bridges
-  `live-client.js`'s raw events into `window.VyraRecognitionRuntime.push(...)` yet. Phase 3's
-  generic adapter contract is now ready for a `tiktok-live-adapter.js` provider registration to
-  build on.
-- **Phases 5-22**: not started. See `VYRA_MASTER_ROADMAP.md` for full breakdown, dependencies,
-  and the flagged architecture conflict (local-first app vs. multi-tenant SaaS model implied
-  by Phase 14+).
+- **Phase 4 — Premium Widget Design System (re-prioritized, this pass)**: done. Built
+  `premium-widget-core.js` (lifecycle: mount/show/hide/update/preview/setPerformanceMode/
+  destroy/getState/subscribe), `premium-widget-tokens.css` (shared tokens + all 4
+  family/tier CSS blocks), `premium-widget-assets.js` (image sanitization, initials,
+  hand-authored inline SVG glyphs), `premium-widget-demo.html`, and
+  `docs/PREMIUM_WIDGET_SPEC.md` (written before the implementation, per the user's
+  instruction — every constant in the CSS/JS traces back to a value named in the spec). Four
+  visually distinct families built: Crystal Halo, Royal Crown, Legendary Portal, Elite
+  Minimal — verified genuinely different silhouettes (not recolored rectangles) by direct
+  bounding-box measurement, not just class names. Separate, additive system from
+  `recognition-card.js`/`recognition-card.css` — zero dependency either direction, different
+  root z-index band (999998 vs. Recognition Card's 999999). See `VYRA_ARCHITECTURE.md` §10
+  for the full architectural writeup.
+  **Verified this session** (see "Manual visual verification" below for the full breakdown):
+  mount/show/hide/replay lifecycle across all 4 families and all 3 tiers; missing-avatar and
+  missing-gift-image fallback (initials / SVG glyph, never a broken `<img>`); long name
+  ellipsis truncation; emoji and non-Latin (Japanese/Arabic) name rendering; 4 families shown
+  simultaneously side-by-side (flex-wrap layout, no extra code needed); low-performance mode
+  (particles/glow hidden); forced reduced-motion (all transitions collapse to 1ms); a 100x
+  rapid-replay stress test leaving zero leaked DOM nodes/instances afterward; zero console
+  errors throughout. Geometry-verified at exactly 1080×1920 (portrait), 1920×1080 (landscape),
+  and 1080×1080 (square) via `getBoundingClientRect()`: every family stayed within the
+  viewport and within the documented safe zone at every resolution, every avatar frame
+  computed `border-radius: 50%` (circular), and bounding-box dimensions differed meaningfully
+  per family (e.g. at 1080×1920 legendary tier: Crystal Halo 313×105, Royal Crown 359×132,
+  Legendary Portal 313×233 — the tallest, ~12% of viewport height as the spec predicted —
+  Elite Minimal 276×63 — the slimmest), confirming distinct silhouettes, not just distinct
+  colors.
+  **Verification gap, disclosed**: automated pixel screenshots
+  (`computer{action:"screenshot"}`/`zoom`) timed out consistently in this session's
+  environment regardless of viewport size — a known recurring tool issue in this session, not
+  specific to this feature. Geometry/computed-style inspection substituted for pixel review
+  (see above); a genuine pixel-level visual pass is still recommended once screenshot tooling
+  is available, flagged in `VYRA_ARCHITECTURE.md` §10.
+- **Phase 5 — Premium Gift Widget**: not started.
+- **Phase 6 — Top Gifter Widget**: not started.
+- **Phase 7 — MVP Reveal Widget**: not started.
+- **Phase 8 — Natural Like Fountain**: not started.
+- **Phase 9 — Match Widgets (X2/X3/Glove/Booster)**: not started.
+- **Phase 10 — Premium Widget Overlay Integration**: not started.
+- **Phase 11 — TikTok LIVE Adapter** (formerly Phase 4 before re-prioritization): not
+  started. The **transport** already exists and works (`tiktok-bridge/bridge.js` →
+  `tiktok-live-connector` → `server.ps1` → `live-client.js`); the Phase 3 generic adapter
+  contract is ready for a `tiktok-live-adapter.js` provider registration to build on whenever
+  this phase starts.
+- **Phase 12 — OBS and TikTok LIVE Studio Validation**: not started.
+- Billing/analytics/campaigns/AI/account/workspace/general-SaaS-expansion phases: explicitly
+  **deferred** per the user's 2026-07-22 instruction, not started, not currently in scope —
+  see `VYRA_MASTER_ROADMAP.md`'s "Deferred" section for their preserved acceptance criteria.
 
 ## Failing tests
 
-None. `recognition-verify.js` reports 262/262 in both Node and browser as of the Phase 3
-adapter pass (up from 246/246 at Phase 2, +16 new adapter cases). One test-authoring bug was
-found and fixed while writing the new cases (not an adapter defect): "Adapter 11" originally
-asserted `state.reconnectAttempt >= 1` after a successful reconnect, but `reconnectAttempt`
-correctly resets to 0 on reconnect success (standard backoff-reset-on-success semantics) —
-fixed to assert on the cumulative `stats.reconnectsAttempted` instead, which never resets.
-No other automated test suite exists in the repository (confirmed — no `package.json` test
-script at root, no Jest/Mocha/Vitest config anywhere).
+None. `recognition-verify.js` (Recognition Engine only — the Premium Widget system has no
+automated test harness yet, see "Known gaps" below) still reports 262/262 in both Node and
+browser, unchanged by this pass since no `recognition-*.js` file was touched. One
+test-authoring bug was found and fixed during Phase 3 (not an adapter defect, see prior
+entries in git history) — not relevant to this pass.
+
+## Known gaps for the Premium Widget system
+
+- **No automated test harness yet** (unlike the Recognition Engine's 262-case
+  `recognition-verify.js`). Everything verified this pass was manual (DOM/console/geometry
+  inspection in the browser). Adding a Node+browser test harness for
+  `premium-widget-core.js` (mirroring the Recognition Engine's `runCase`/thunk pattern) is a
+  reasonable candidate for early in Phase 5, once there's real event-driven usage to test
+  against, rather than adding tests against the foundation in isolation.
+- **No pixel-level screenshot verification** — see the disclosed gap above.
 
 ## Baseline audit findings (Phase 0 — recorded, not fixed, per audit rule "record first")
 
@@ -123,21 +177,20 @@ audit pass — both were already hardened/verified in prior session work referen
 
 ## Current blockers
 
-None for Phases 0-13 (all buildable within the current local-first architecture). One
-**documented, unresolved product decision** blocks serious work on Phase 14 onward: whether
-VYRA's "workspace/account" model becomes a real multi-tenant hosted backend or stays a
-local-per-creator concept (see `VYRA_ARCHITECTURE.md` §9). This should be raised with the
-user before Phase 14 begins — not before.
+None for Phases 4-12 (all buildable within the current local-first architecture, and none
+require the deferred billing/analytics/account/SaaS work). The local-first-vs-SaaS product
+decision (see `VYRA_ARCHITECTURE.md` §9) remains open but is now irrelevant to the near-term
+roadmap entirely (Account/Workspace is in the explicitly deferred section).
 
 ## Exact next action
 
-Begin **Phase 4 — TikTok LIVE Adapter**: first inspect the existing transport
-(`tiktok-bridge/bridge.js` + `server.ps1` + `live-client.js`) in detail before writing any
-code — do not invent a second connection mechanism. Build `tiktok-live-adapter.js` (registers
-a `'tiktok'` provider with `window.VyraRecognitionAdapter.registerProvider`, wrapping the
-existing `/api/events` polling transport — or a direct `tiktok-live-connector` integration if
-that turns out to be more appropriate after inspection — behind the Phase 3 adapter contract)
-and `tiktok-live-normalizer.js` (converts TikTok-shaped payloads into `NormalizedEvent`,
-handling gift-streak non-double-counting, safe identity fallbacks, and image URL validation).
-Support a simulation mode so development doesn't require a live TikTok session. Add tests,
-run them, and commit as `feat(tiktok): connect live events to recognition runtime`.
+Begin **Phase 5 — Premium Gift Widget**: build the first real event-driven widget on top of
+the Phase 4 foundation. Use `window.VyraPremiumWidget.show(model)` with a real gift-tier →
+family/tier mapping (small/medium/large gift coin thresholds — reuse
+`recognition-rules.js`'s `priority.giftThresholds` convention for consistency, or define an
+equivalent local constant if reuse isn't clean) — all 4 families should be usable across gift
+tiers per `docs/PREMIUM_WIDGET_SPEC.md`, this phase decides the actual default
+family-per-tier mapping and wires it to real gift image/amount/coins data. Does not touch
+`recognition-card.js`/`recognition-card.css` or any existing widget in `media.js`. Add tests
+(if a harness is started, see "Known gaps" above) and/or a manual verification pass, then
+commit as `feat(widgets): add premium gift widget`.

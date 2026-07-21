@@ -1,6 +1,7 @@
 # VYRA Architecture
 
-Last audited: 2026-07-22, branch `feature/vyra-vfx-engine`, commit `540eaac`.
+Last audited: 2026-07-22, branch `feature/vyra-vfx-engine`. Updated same day to add §10
+(Premium Widget Design System, Roadmap Phase 4).
 
 This document describes the system **as it actually exists today**, verified by direct
 inspection of the repository (not assumed). Where the long-term roadmap
@@ -175,3 +176,49 @@ Runtime, hardening, adapters, overlay runtime/editor/browser-source, VFX integra
 Gifter/MVP, match events, campaigns, automation, sound) are all buildable within the current
 local-first architecture without resolving this conflict, and are sequenced first for that
 reason. The conflict must be resolved before serious work starts on Phase 14.
+
+## 10. Premium Widget Design System (Roadmap Phase 4, 2026-07-22)
+
+A **separate, additive rendering system** from the Recognition Engine (§4), built for the
+product's primary near-term goal: a premium live overlay widget system (Top Gifter, MVP
+Reveal, Gift Widget, Match Widgets — Roadmap Phases 5-9). Files: `premium-widget-core.js`
+(lifecycle engine), `premium-widget-tokens.css` (shared tokens + all 4 family/tier CSS),
+`premium-widget-assets.js` (image sanitization, initials, hand-authored inline SVG glyphs),
+`premium-widget-demo.html` (dev demo). Full spec: `docs/PREMIUM_WIDGET_SPEC.md`.
+
+- **No dependency on the Recognition Engine** — different root class (`.vyra-pw-root` vs.
+  `.vyra-recognition-root`), different z-index band (999998 vs. 999999, Recognition Card wins
+  ties so high-frequency join/like traffic is never buried under a less-frequent premium
+  widget), no shared selectors. Both systems can be mounted on the same overlay page
+  simultaneously without collision — confirmed by construction, not yet tested with both
+  actually mounted together (that's Roadmap Phase 10, Premium Widget Overlay Integration).
+- **Architectural difference from Recognition Card**: Recognition Card is a single-current-card,
+  replace-on-show model (one card visible at a time, queue-driven). Premium Widget supports
+  **multiple concurrently visible instances**, keyed by `model.id`, tracked in a `Map` —
+  necessary because later phases need a persistent Top Gifter widget and transient Gift Widget
+  bursts on screen at the same time. `.vyra-pw-root` is `display:flex; flex-wrap:wrap` so
+  multiple simultaneous instances lay out side-by-side automatically with no extra code.
+- **Same timer-safety discipline as `recognition-card.js`**: every phase transition
+  (anticipation → reveal → settled → exit → removed) is a single generation-guarded
+  `setTimeout`, one generation counter + pending-timer `Set` **per instance** (not per-module,
+  since multiple instances can be mid-animation independently). Zero `setInterval`, zero
+  `requestAnimationFrame` loop.
+- **One documented deviation from Recognition Card's contract**: `destroy()` is **not
+  permanent** here — `mount()` may be called again afterward. This is deliberate (the system
+  is expected to support editor-style repeated mount/destroy cycles in a future in-app widget
+  editor), not an oversight; called out explicitly in both the spec and the code comment.
+- **4 visually distinct families**, verified genuinely different silhouettes (not
+  color-only variants) by direct geometry measurement at 1080×1920/1920×1080/1080×1080:
+  Crystal Halo (faceted panel, gift orb overlapping the avatar edge), Royal Crown (asymmetric
+  crest + crown glyph + separate corner gift emblem), Legendary Portal (concentric portal
+  rings behind a centered avatar, gift resting on a pedestal, staged entry animation, tallest
+  family at ~12% of a 1920px-tall canvas), Elite Minimal (slim pill, no glow/particles).
+- **Verification methodology note**: automated screenshot capture (`computer{action:
+  "screenshot"}`/`zoom`) was unavailable in this session's environment (consistent tool
+  timeout regardless of viewport size) — visual QA at the three required resolutions was done
+  via `getBoundingClientRect()`/`getComputedStyle()` geometry inspection instead (confirmed
+  circular avatars, in-viewport bounds, safe-zone compliance, distinct per-family bounding
+  boxes). This is a real, load-bearing verification (not automated unit tests), but it is not
+  pixel-level visual review — flagged so a future session with working screenshot tooling can
+  do a supplementary pixel-level pass before this system is considered fully visually signed
+  off.
