@@ -194,3 +194,26 @@
  * @property {{ariaLabel: string}} accessibility
  * @property {CardModelMetadata} metadata
  */
+
+/**
+ * @typedef {'unmounted'|'idle'|'entering'|'visible'|'exiting'|'destroyed'} CardUIPhase
+ */
+
+/**
+ * Return value of recognition-card.js's getState() (Steg 8) — always a deep copy, never the
+ * live internal object.
+ * @typedef {Object} CardUIState
+ * @property {boolean} mounted
+ * @property {boolean} visible
+ * @property {CardUIPhase} phase
+ * @property {?CardModel} currentModel
+ */
+
+/**
+ * Payload handed to recognition-card.js subscribers.
+ * @typedef {Object} CardUINotification
+ * @property {'mount'|'show'|'replace'|'update'|'enter-complete'|'hide'|'exit-complete'|'destroy'|'error'} type
+ * @property {number} timestamp
+ * @property {CardModel} [model]
+ * @property {string} [reason]
+ */

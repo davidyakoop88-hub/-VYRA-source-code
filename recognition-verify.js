@@ -51,17 +51,47 @@
     return ns;
   }
 
+  function getCard() {
+    var ns = root.VyraRecognitionCard;
+    if (!ns || typeof ns.mount !== 'function') {
+      throw new Error('window.VyraRecognitionCard is not available — load recognition-types.js, recognition-rules.js, recognition-card-mapper.js and recognition-card.js first');
+    }
+    return ns;
+  }
+
+  function hasDom() {
+    return typeof document !== 'undefined';
+  }
+
+  function wait(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
   function makeResult(name, pass, details) {
     return { name: name, pass: !!pass, details: details || '' };
   }
 
+  // Steg 8 (Recognition Card) needs to observe state AFTER real setTimeout-driven animation
+  // phases finish (enter-complete, exit-complete, stale-timer safety) — something a purely
+  // synchronous result can never express. A case function may return a plain {pass, details}
+  // object (every case before Steg 8 does, and still works completely unchanged) OR a Promise
+  // of one (Steg 8's timing-sensitive cases).
+  //
+  // runCase() returns a THUNK (a zero-arg function), not an already-started Promise. This
+  // matters because every stage shares one singleton (Merge/Queue/Controller/Mapper/Card) the
+  // same way `state`/`selected` are shared globals in studio.js — if every case's fn() started
+  // executing immediately (e.g. via Promise.all), a later synchronous case's card.destroy()
+  // would race ahead of an earlier case still mid-`wait()`, corrupting its assertions. run()
+  // below invokes these thunks one at a time, awaiting each one's full completion (including
+  // any real wait) before starting the next — the same strict serial order the plain
+  // synchronous version had before Steg 8 introduced genuine async cases.
   function runCase(name, fn) {
-    try {
-      var outcome = fn();
-      return makeResult(name, outcome.pass, outcome.details);
-    } catch (err) {
-      return makeResult(name, false, 'threw: ' + (err && err.message ? err.message : String(err)));
-    }
+    return function runDeferredCase() {
+      return Promise.resolve()
+        .then(function () { return fn(); })
+        .then(function (outcome) { return makeResult(name, outcome.pass, outcome.details); })
+        .catch(function (err) { return makeResult(name, false, 'threw: ' + (err && err.message ? err.message : String(err))); });
+    };
   }
 
   // ---- Steg 3: Event Normalizer cases --------------------------------------------
@@ -1565,14 +1595,558 @@
     mapper.clearStats(); // leave the shared singleton clean for anything run after this
   }
 
+  // ---- Steg 8: Recognition Card UI cases --------------------------------------------
+  //
+  // Card is the one Recognition Engine file that needs a real DOM — there is no meaningful
+  // DOM-free logic to verify headlessly (unlike every earlier stage). Every case below checks
+  // hasDom() first and reports a clear "skipped: no DOM" soft-pass under Node, then runs its
+  // real assertions in the browser. Two required checks (#40/#41: media.js/studio.html
+  // untouched) are repo-level, not JS-testable, and are confirmed separately via `git status`
+  // in the final report. Two more (#42/#43: demo works standalone / no console errors on every
+  // demo button) are verified directly against recognition-card-demo.html in the browser, not
+  // through this shared harness, since that demo is a separate page this file never loads.
+
+  function runCardCases(results) {
+    var card = getCard();
+    var mapper = getMapper();
+
+    function mapModel(overrides) {
+      var event = makeMergedEvent(overrides);
+      var result = mapper.map(event);
+      if (result.status !== 'mapped') throw new Error('test setup: mapModel() could not map ' + JSON.stringify(overrides) + ' -> ' + result.reason);
+      return result.model;
+    }
+
+    function freshMount() {
+      card.destroy();
+      var container = document.createElement('div');
+      container.id = 'vyra-recognition-test-stage';
+      document.body.appendChild(container);
+      card.mount(container);
+      return container;
+    }
+
+    function teardown(container) {
+      card.destroy();
+      if (container && container.parentNode) container.parentNode.removeChild(container);
+    }
+
+    function skip(reason) {
+      return { pass: true, details: 'skipped: ' + (reason || 'no DOM in this environment') };
+    }
+
+    results.push(runCase('Card 1. mount med HTMLElement', function () {
+      if (!hasDom()) return skip();
+      card.destroy();
+      var container = document.createElement('div');
+      document.body.appendChild(container);
+      var r = card.mount(container);
+      var ok = r.status === 'mounted' && !!card.getElement() && card.getElement().parentNode === container;
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 2. mount med selector', function () {
+      if (!hasDom()) return skip();
+      card.destroy();
+      var container = document.createElement('div');
+      container.id = 'vyra-recognition-selector-target';
+      document.body.appendChild(container);
+      var r = card.mount('#vyra-recognition-selector-target');
+      var ok = r.status === 'mounted' && card.getElement().parentNode === container;
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 3. Ogiltig target rejected', function () {
+      if (!hasDom()) return skip();
+      card.destroy();
+      var r1 = card.mount('#this-selector-matches-nothing');
+      var r2 = card.mount(42);
+      var r3 = card.mount(null);
+      var ok = r1.status === 'rejected' && r2.status === 'rejected' && r3.status === 'rejected';
+      return { pass: ok, details: JSON.stringify({ r1: r1, r2: r2, r3: r3 }) };
+    }));
+
+    results.push(runCase('Card 4. show join', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var r = card.show(mapModel({ kind: 'join' }));
+      var ok = r.status === 'shown' && card.getState().phase === 'entering' && card.getState().currentModel.kind === 'join';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 5. show like', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var r = card.show(mapModel({ kind: 'like', count: 5 }));
+      var ok = r.status === 'shown' && card.getState().currentModel.kind === 'like';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 6. show share', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var r = card.show(mapModel({ kind: 'share' }));
+      var ok = r.status === 'shown' && card.getState().currentModel.kind === 'share';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 7. show follow', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var r = card.show(mapModel({ kind: 'follow' }));
+      var ok = r.status === 'shown' && card.getState().currentModel.kind === 'follow';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 8. show small gift', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var r = card.show(mapModel({ kind: 'gift', gift: { id: 'g8', name: 'Rose', imageUrl: null }, coins: 10 }));
+      var ok = r.status === 'shown' && card.getState().currentModel.gift.tier === 'small';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 9. show medium gift', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var r = card.show(mapModel({ kind: 'gift', gift: { id: 'g9', name: 'Galaxy', imageUrl: null }, coins: 500 }));
+      var ok = r.status === 'shown' && card.getState().currentModel.gift.tier === 'medium';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 10. show large gift', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var r = card.show(mapModel({ kind: 'gift', gift: { id: 'g10', name: 'Universe', imageUrl: null }, coins: 5000 }));
+      var ok = r.status === 'shown' && card.getState().currentModel.gift.tier === 'large';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 11. Ratt variantklass anvands', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'gift', gift: { id: 'g11', name: 'Universe', imageUrl: null }, coins: 5000 }));
+      var el = card.getElement().querySelector('.vyra-recognition-card');
+      var ok = !!el && el.classList.contains('vyra-recognition-variant-gift-legendary');
+      teardown(container);
+      return { pass: ok, details: 'className=' + (el && el.className) };
+    }));
+
+    results.push(runCase('Card 12. Avatar ar cirkular', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join' }));
+      var frame = card.getElement().querySelector('.vyra-recognition-avatar-frame');
+      var radius = frame ? getComputedStyle(frame).borderRadius : '';
+      var ok = !!frame && (radius.indexOf('50%') !== -1 || parseFloat(radius) > 0);
+      teardown(container);
+      return { pass: ok, details: 'borderRadius=' + radius };
+    }));
+
+    results.push(runCase('Card 13. Giftbild renderas separat', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'gift', gift: { id: 'g13', name: 'Rose', imageUrl: null }, coins: 10 }));
+      var avatarFrame = card.getElement().querySelector('.vyra-recognition-avatar-frame');
+      var giftFrame = card.getElement().querySelector('.vyra-recognition-gift-frame');
+      var ok = !!avatarFrame && !!giftFrame && avatarFrame !== giftFrame;
+      teardown(container);
+      return { pass: ok, details: 'avatarFrame=' + !!avatarFrame + ' giftFrame=' + !!giftFrame };
+    }));
+
+    results.push(runCase('Card 14. Avatarfallback fungerar', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join', actor: { avatarUrl: null } }));
+      var frame = card.getElement().querySelector('.vyra-recognition-avatar-frame');
+      var ok = !!frame && frame.classList.contains('vyra-recognition-avatar-fallback') && !frame.querySelector('img');
+      teardown(container);
+      return { pass: ok, details: 'className=' + (frame && frame.className) };
+    }));
+
+    results.push(runCase('Card 15. Giftfallback fungerar', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'gift', gift: { id: 'g15', name: 'Rose', imageUrl: null }, coins: 10 }));
+      var frame = card.getElement().querySelector('.vyra-recognition-gift-frame');
+      var ok = !!frame && frame.classList.contains('vyra-recognition-gift-fallback') && !frame.querySelector('img');
+      teardown(container);
+      return { pass: ok, details: 'className=' + (frame && frame.className) };
+    }));
+
+    results.push(runCase('Card 16. Ogiltig avatar-URL ignoreras', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join', actor: { avatarUrl: 'javascript:alert(1)' } }));
+      var frame = card.getElement().querySelector('.vyra-recognition-avatar-frame');
+      var ok = !!frame && !frame.querySelector('img') && frame.classList.contains('vyra-recognition-avatar-fallback');
+      teardown(container);
+      return { pass: ok, details: 'className=' + (frame && frame.className) };
+    }));
+
+    results.push(runCase('Card 17. Ogiltig gift-URL ignoreras', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'gift', gift: { id: 'g17', name: 'Rose', imageUrl: 'javascript:alert(1)' }, coins: 10 }));
+      var frame = card.getElement().querySelector('.vyra-recognition-gift-frame');
+      var ok = !!frame && !frame.querySelector('img') && frame.classList.contains('vyra-recognition-gift-fallback');
+      teardown(container);
+      return { pass: ok, details: 'className=' + (frame && frame.className) };
+    }));
+
+    results.push(runCase('Card 18. Text renderas med textContent', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var dangerous = '<b>XSS</b><img src=x onerror=alert(1)>';
+      card.show(mapModel({ kind: 'join', actor: { displayName: dangerous } }));
+      var titleEl = card.getElement().querySelector('.vyra-recognition-title');
+      var ok = !!titleEl && titleEl.textContent === dangerous && !titleEl.querySelector('b') && !titleEl.querySelector('img');
+      teardown(container);
+      return { pass: ok, details: 'textContent=' + (titleEl && titleEl.textContent) + ' innerHTML=' + (titleEl && titleEl.innerHTML) };
+    }));
+
+    results.push(runCase('Card 19. Aria-label anvands', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var model = mapModel({ kind: 'join', actor: { displayName: 'David' } });
+      card.show(model);
+      var el = card.getElement().querySelector('.vyra-recognition-card');
+      var ok = !!el && el.getAttribute('aria-label') === model.accessibility.ariaLabel;
+      teardown(container);
+      return { pass: ok, details: 'aria-label=' + (el && el.getAttribute('aria-label')) };
+    }));
+
+    results.push(runCase('Card 20. role=status finns', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join' }));
+      var el = card.getElement().querySelector('.vyra-recognition-card');
+      var ok = !!el && el.getAttribute('role') === 'status';
+      teardown(container);
+      return { pass: ok, details: 'role=' + (el && el.getAttribute('role')) };
+    }));
+
+    results.push(runCase('Card 21. aria-live=polite finns', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join' }));
+      var el = card.getElement().querySelector('.vyra-recognition-card');
+      var ok = !!el && el.getAttribute('aria-live') === 'polite';
+      teardown(container);
+      return { pass: ok, details: 'aria-live=' + (el && el.getAttribute('aria-live')) };
+    }));
+
+    results.push(runCase('Card 22. update andrar modellen', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'like', count: 5 }));
+      var r = card.update(mapModel({ kind: 'like', count: 999 }));
+      var countEl = card.getElement().querySelector('.vyra-recognition-count-label');
+      var ok = r.status === 'updated' && !!countEl && countEl.textContent === '×999';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) + ' countText=' + (countEl && countEl.textContent) };
+    }));
+
+    results.push(runCase('Card 23. update aterskapar inte root', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'like', count: 5 }));
+      var elBefore = card.getElement().querySelector('.vyra-recognition-card');
+      card.update(mapModel({ kind: 'like', count: 999 }));
+      var elAfter = card.getElement().querySelector('.vyra-recognition-card');
+      var ok = elBefore === elAfter;
+      teardown(container);
+      return { pass: ok, details: 'sameElement=' + ok };
+    }));
+
+    results.push(runCase('Card 24. hide gar till exiting', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join' }));
+      card.hide('test');
+      var ok = card.getState().phase === 'exiting';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(card.getState()) };
+    }));
+
+    results.push(runCase('Card 25. exit slutar i idle', function () {
+      if (!hasDom()) return Promise.resolve(skip());
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join' }));
+      card.hide('test');
+      return wait(500).then(function () {
+        var state = card.getState();
+        var el = card.getElement().querySelector('.vyra-recognition-card');
+        var ok = state.phase === 'idle' && state.currentModel === null && !el;
+        teardown(container);
+        return { pass: ok, details: JSON.stringify(state) + ' elRemains=' + !!el };
+      });
+    }));
+
+    results.push(runCase('Card 26. show under aktivt kort ger replace', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join' }));
+      var r = card.show(mapModel({ kind: 'like', count: 3 }));
+      var ok = r.status === 'replaced';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Card 27. Gamla timers paverkar inte nytt kort', function () {
+      if (!hasDom()) return Promise.resolve(skip());
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join', actor: { id: 'old-actor' } }));
+      // replace almost immediately, well before the first card's own enter sequence would
+      // have finished — its now-stale timers must never touch state again
+      card.show(mapModel({ kind: 'like', actor: { id: 'new-actor' }, count: 7 }));
+      return wait(900).then(function () {
+        var state = card.getState();
+        var ok = state.phase === 'visible' && state.currentModel.actor.id === 'new-actor' && state.currentModel.kind === 'like';
+        teardown(container);
+        return { pass: ok, details: JSON.stringify(state) };
+      });
+    }));
+
+    results.push(runCase('Card 28. destroy tar bort DOM', function () {
+      if (!hasDom()) return skip();
+      card.destroy();
+      var container = document.createElement('div');
+      document.body.appendChild(container);
+      card.mount(container);
+      card.show(mapModel({ kind: 'join' }));
+      var r = card.destroy();
+      var ok = r.status === 'destroyed' && container.children.length === 0;
+      if (container.parentNode) container.parentNode.removeChild(container);
+      return { pass: ok, details: JSON.stringify(r) + ' childCount=' + container.children.length };
+    }));
+
+    results.push(runCase('Card 29. destroy rensar timers', function () {
+      if (!hasDom()) return Promise.resolve(skip());
+      var container = document.createElement('div');
+      document.body.appendChild(container);
+      card.destroy();
+      card.mount(container);
+      var events = [];
+      var unsub = card.subscribe(function (e) { events.push(e); });
+      card.show(mapModel({ kind: 'join' })); // starts phase timers
+      card.destroy(); // must clear them before they fire
+      return wait(900).then(function () {
+        unsub();
+        var ok = !events.some(function (e) { return e.type === 'enter-complete'; });
+        if (container.parentNode) container.parentNode.removeChild(container);
+        return { pass: ok, details: JSON.stringify(events.map(function (e) { return e.type; })) };
+      });
+    }));
+
+    results.push(runCase('Card 30. Upprepad destroy ar saker', function () {
+      if (!hasDom()) return skip();
+      card.destroy();
+      var r1 = card.destroy();
+      var r2 = card.destroy();
+      var ok = r1.status === 'destroyed' && r2.status === 'destroyed';
+      return { pass: ok, details: JSON.stringify({ r1: r1, r2: r2 }) };
+    }));
+
+    results.push(runCase('Card 31. Upprepad hide ar saker', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var r1 = card.hide();
+      var r2 = card.hide();
+      var ok = r1.status === 'hidden' && r2.status === 'hidden';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify({ r1: r1, r2: r2 }) };
+    }));
+
+    results.push(runCase('Card 32. getState returnerar kopia', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join' }));
+      var snapshot = card.getState();
+      snapshot.phase = 'tampered';
+      snapshot.currentModel.kind = 'tampered';
+      var again = card.getState();
+      var ok = again.phase !== 'tampered' && again.currentModel.kind !== 'tampered';
+      teardown(container);
+      return { pass: ok, details: JSON.stringify({ mutatedSnapshot: snapshot, freshRead: again }) };
+    }));
+
+    results.push(runCase('Card 33. getElement returnerar root', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var el = card.getElement();
+      var ok = !!el && el.classList.contains('vyra-recognition-root') && el.parentNode === container;
+      teardown(container);
+      return { pass: ok, details: 'className=' + (el && el.className) };
+    }));
+
+    results.push(runCase('Card 34. Subscriber far show-event', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var events = [];
+      var unsub = card.subscribe(function (e) { events.push(e); });
+      card.show(mapModel({ kind: 'join' }));
+      unsub();
+      var ok = events.some(function (e) { return e.type === 'show'; });
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(events.map(function (e) { return e.type; })) };
+    }));
+
+    results.push(runCase('Card 35. Subscriber far hide-event', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var events = [];
+      var unsub = card.subscribe(function (e) { events.push(e); });
+      card.show(mapModel({ kind: 'join' }));
+      card.hide('reason-35');
+      unsub();
+      var ok = events.some(function (e) { return e.type === 'hide' && e.reason === 'reason-35'; });
+      teardown(container);
+      return { pass: ok, details: JSON.stringify(events) };
+    }));
+
+    results.push(runCase('Card 36. Subscriber-fel stoppar inte nasta subscriber', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var secondCalled = false;
+      var unsub1 = card.subscribe(function () { throw new Error('boom'); });
+      var unsub2 = card.subscribe(function () { secondCalled = true; });
+      card.show(mapModel({ kind: 'join' }));
+      unsub1();
+      unsub2();
+      teardown(container);
+      return { pass: secondCalled === true, details: 'secondCalled=' + secondCalled };
+    }));
+
+    results.push(runCase('Card 37. reduced-motion stods', function () {
+      if (!hasDom() || !root.matchMedia) return Promise.resolve(skip(!hasDom() ? 'no DOM' : 'no matchMedia'));
+      var container = freshMount();
+      var originalMatchMedia = root.matchMedia;
+      root.matchMedia = function (query) {
+        if (String(query).indexOf('prefers-reduced-motion') !== -1) return { matches: true, media: query, addListener: function () {}, removeListener: function () {} };
+        return originalMatchMedia.call(root, query);
+      };
+      var events = [];
+      var unsub = card.subscribe(function (e) { events.push(e); });
+      card.show(mapModel({ kind: 'join' }));
+      return wait(150).then(function () {
+        root.matchMedia = originalMatchMedia;
+        unsub();
+        var ok = card.getState().phase === 'visible' && events.some(function (e) { return e.type === 'enter-complete'; });
+        teardown(container);
+        return { pass: ok, details: 'phase=' + card.getState().phase + ' events=' + JSON.stringify(events.map(function (e) { return e.type; })) };
+      });
+    }));
+
+    results.push(runCase('Card 38. Inga globala CSS-selectors paverkas', function () {
+      if (!hasDom()) return skip();
+      var sheet = findCardStylesheet();
+      if (!sheet) return { pass: false, details: 'recognition-card.css stylesheet not found in document.styleSheets' };
+      var offenders = [];
+      try {
+        Array.prototype.forEach.call(sheet.cssRules, function (rule) {
+          if (!rule.selectorText) return;
+          rule.selectorText.split(',').forEach(function (part) {
+            var trimmed = part.trim().toLowerCase();
+            if (['body', 'html', 'button', 'img', '*', 'a', 'input', 'div', 'span', 'p'].indexOf(trimmed) !== -1) {
+              offenders.push(trimmed);
+            }
+          });
+        });
+      } catch (err) {
+        return { pass: false, details: 'could not read cssRules: ' + err.message };
+      }
+      return { pass: offenders.length === 0, details: 'offenders=' + JSON.stringify(offenders) };
+    }));
+
+    results.push(runCase('Card 39. Inga externa fonts laddas', function () {
+      if (!hasDom()) return skip();
+      var sheet = findCardStylesheet();
+      if (!sheet) return { pass: false, details: 'recognition-card.css stylesheet not found in document.styleSheets' };
+      var fontFaceCount = 0;
+      try {
+        Array.prototype.forEach.call(sheet.cssRules, function (rule) {
+          if (typeof CSSFontFaceRule !== 'undefined' && rule instanceof CSSFontFaceRule) fontFaceCount++;
+        });
+      } catch (err) {
+        return { pass: false, details: 'could not read cssRules: ' + err.message };
+      }
+      var container = freshMount();
+      card.show(mapModel({ kind: 'join' }));
+      var cardEl = card.getElement().querySelector('.vyra-recognition-card');
+      var fontFamily = cardEl ? getComputedStyle(cardEl).fontFamily : '';
+      teardown(container);
+      var ok = fontFaceCount === 0 && fontFamily.toLowerCase().indexOf('-apple-system') !== -1;
+      return { pass: ok, details: 'fontFaceCount=' + fontFaceCount + ' fontFamily=' + fontFamily };
+    }));
+
+    results.push(runCase('Card 44. Lang displayName bryter inte layout', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var longName = 'A'.repeat(80);
+      card.show(mapModel({ kind: 'join', actor: { displayName: longName } }));
+      var cardEl = card.getElement().querySelector('.vyra-recognition-card');
+      var titleEl = card.getElement().querySelector('.vyra-recognition-title');
+      var cardWidth = cardEl.getBoundingClientRect().width;
+      var overflowStyle = titleEl ? getComputedStyle(titleEl).textOverflow : '';
+      var ok = cardWidth <= 410 && overflowStyle === 'ellipsis';
+      teardown(container);
+      return { pass: ok, details: 'cardWidth=' + cardWidth + ' textOverflow=' + overflowStyle };
+    }));
+
+    results.push(runCase('Card 45. Lang giftName bryter inte layout', function () {
+      if (!hasDom()) return skip();
+      var container = freshMount();
+      var longGiftName = 'B'.repeat(80);
+      card.show(mapModel({ kind: 'gift', gift: { id: 'g45', name: longGiftName, imageUrl: null }, coins: 10 }));
+      var cardEl = card.getElement().querySelector('.vyra-recognition-card');
+      var subtitleEl = card.getElement().querySelector('.vyra-recognition-subtitle');
+      var cardWidth = cardEl.getBoundingClientRect().width;
+      var overflowStyle = subtitleEl ? getComputedStyle(subtitleEl).textOverflow : '';
+      var ok = cardWidth <= 410 && overflowStyle === 'ellipsis';
+      teardown(container);
+      return { pass: ok, details: 'cardWidth=' + cardWidth + ' textOverflow=' + overflowStyle };
+    }));
+
+    card.destroy(); // leave the shared singleton clean for anything run after this
+  }
+
+  function findCardStylesheet() {
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      var sheet = document.styleSheets[i];
+      try {
+        if (sheet.href && sheet.href.indexOf('recognition-card.css') !== -1) return sheet;
+      } catch (err) { /* cross-origin sheet, skip */ }
+    }
+    return null;
+  }
+
+  // Returns a Promise<Array<{name, pass, details}>>. `caseThunks` collects the deferred thunks
+  // runCase() produces; they are invoked one at a time via reduce, each awaited to completion
+  // (including any real wait()) before the next one starts — strict serial order, required
+  // because every stage's singleton is shared mutable state across all of that stage's cases.
   function run() {
-    var results = [];
-    runNormalizerCases(results);
-    runMergeCases(results);
-    runQueueCases(results);
-    runControllerCases(results);
-    runMapperCases(results);
-    return results;
+    var caseThunks = [];
+    runNormalizerCases(caseThunks);
+    runMergeCases(caseThunks);
+    runQueueCases(caseThunks);
+    runControllerCases(caseThunks);
+    runMapperCases(caseThunks);
+    runCardCases(caseThunks);
+
+    var output = [];
+    return caseThunks.reduce(function (chain, thunk) {
+      return chain.then(function () { return thunk(); }).then(function (result) { output.push(result); });
+    }, Promise.resolve()).then(function () { return output; });
   }
 
   var api = { run: run };

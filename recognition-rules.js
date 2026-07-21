@@ -1,8 +1,8 @@
-// recognition-rules.js — Recognition Engine, pure configuration (Steg 4 + 5 + 6 + 7).
+// recognition-rules.js — Recognition Engine, pure configuration (Steg 4 + 5 + 6 + 7 + 8).
 // No logic, no DOM, no timers, no side effects beyond registering window.VyraRecognitionRules.
-// Consumed by recognition-merge.js, recognition-queue.js, recognition-controller.js and
-// recognition-card-mapper.js (and later Filter) — never mutated at runtime; the whole tree is
-// frozen below.
+// Consumed by recognition-merge.js, recognition-queue.js, recognition-controller.js,
+// recognition-card-mapper.js and recognition-card.js (and later Filter) — never mutated at
+// runtime; the whole tree is frozen below.
 (function (root) {
   'use strict';
 
@@ -82,6 +82,17 @@
     likeVariantThresholds: Object.freeze({
       wave: 100,
       storm: 1000
+    }),
+
+    // recognition-card.js's UI animation phase durations in ms — purely visual timing, not to
+    // be confused with presentationMs above (how long Controller keeps an event "current" —
+    // Card never decides that itself). Values chosen within the spec's required ranges:
+    // anticipation 80-140, reveal 280-420, settle 180-300, exit 220-320.
+    cardTimingMs: Object.freeze({
+      anticipation: 110,
+      reveal: 340,
+      settle: 220,
+      exit: 260
     })
   };
 

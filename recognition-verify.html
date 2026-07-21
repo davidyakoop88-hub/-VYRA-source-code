@@ -18,10 +18,11 @@
   .details { color:#a99dc4; font:12px/1.4 ui-monospace, Consolas, monospace; word-break:break-all; }
   #summary { margin-top:16px; font-weight:700; }
 </style>
+<link rel="stylesheet" href="recognition-card.css">
 </head>
 <body>
-  <h1>Recognition Engine — Steg 3-7: types, normalizer, rules, merge, queue, controller, card mapper</h1>
-  <p class="sub">Fristaende verifieringssida (dev-only). Laddar recognition-types.js, recognition-rules.js, recognition-normalizer.js, recognition-merge.js, recognition-queue.js, recognition-controller.js, recognition-card-mapper.js och recognition-verify.js i godkand beroendeordning — ingen koppling till studio.html/media.js.</p>
+  <h1>Recognition Engine — Steg 3-8: types, normalizer, rules, merge, queue, controller, card mapper, card</h1>
+  <p class="sub">Fristaende verifieringssida (dev-only). Laddar recognition-types.js, recognition-rules.js, recognition-normalizer.js, recognition-merge.js, recognition-queue.js, recognition-controller.js, recognition-card-mapper.js, recognition-card.js och recognition-verify.js i godkand beroendeordning — ingen koppling till studio.html/media.js.</p>
   <div id="results"></div>
   <div id="summary"></div>
 
@@ -32,21 +33,27 @@
   <script src="recognition-queue.js"></script>
   <script src="recognition-controller.js"></script>
   <script src="recognition-card-mapper.js"></script>
+  <script src="recognition-card.js"></script>
   <script src="recognition-verify.js"></script>
   <script>
     (function () {
-      var results = window.VyraRecognitionVerify.run();
-      var container = document.getElementById('results');
-      container.innerHTML = results.map(function (r) {
-        return '<div class="case ' + (r.pass ? 'pass' : 'fail') + '">'
-          + '<div class="badge">' + (r.pass ? 'PASS' : 'FAIL') + '</div>'
-          + '<div class="name">' + r.name + '</div>'
-          + '<div class="details">' + r.details.replace(/</g, '&lt;') + '</div>'
-          + '</div>';
-      }).join('');
-      var passCount = results.filter(function (r) { return r.pass; }).length;
-      document.getElementById('summary').textContent = passCount + ' / ' + results.length + ' fall godkanda';
-      console.log('[recognition-verify]', passCount + '/' + results.length, results);
+      document.getElementById('summary').textContent = 'Korr...';
+      // run() returns a Promise<Array<...>> since Steg 8 (Card) needs real setTimeout-driven
+      // waits to observe post-animation state — every earlier stage's cases still resolve
+      // effectively immediately, so this only adds a brief, real delay for the Card section.
+      window.VyraRecognitionVerify.run().then(function (results) {
+        var container = document.getElementById('results');
+        container.innerHTML = results.map(function (r) {
+          return '<div class="case ' + (r.pass ? 'pass' : 'fail') + '">'
+            + '<div class="badge">' + (r.pass ? 'PASS' : 'FAIL') + '</div>'
+            + '<div class="name">' + r.name + '</div>'
+            + '<div class="details">' + r.details.replace(/</g, '&lt;') + '</div>'
+            + '</div>';
+        }).join('');
+        var passCount = results.filter(function (r) { return r.pass; }).length;
+        document.getElementById('summary').textContent = passCount + ' / ' + results.length + ' fall godkanda';
+        console.log('[recognition-verify]', passCount + '/' + results.length, results);
+      });
     })();
   </script>
 </body>
