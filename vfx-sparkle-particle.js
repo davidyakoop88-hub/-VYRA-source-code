@@ -74,7 +74,9 @@ VFX.SparkleParticle = class SparkleParticle extends VFX.BaseParticle {
     super.reset(opts);
     this.kind = opts.kind || 'dot';
     this.rotationSpeed = opts.rotationSpeed ?? 0;
-    this.sprite.rotation = Math.random() * Math.PI * 2;
+    // rotation comes from the emitter's seeded "rotation" RNG stream, not
+    // Math.random() (M2 hardening item 4) — matches CrystalHeartParticle.reset.
+    this.sprite.rotation = opts.rotation ?? 0;
     this.sprite.blendMode = opts.additive ? PIXI.BLEND_MODES.ADD : PIXI.BLEND_MODES.NORMAL;
   }
 

@@ -29,23 +29,26 @@
     const scene = engine.createScene('fountain-m2');
     scene.addLayer('fountain');
     scene.addSystem('fountain', emitter);
+    // fountain's own FOUNTAIN_QUALITY_BUDGETS already scales particle count/effects
+    // down at low quality — Engine's generic tickSkip (large effectiveDt jumps with
+    // no render interpolation) would only add visible stutter on top of that, so
+    // this scene opts out of it entirely (M2 hardening item 3).
+    scene.fixedRateOnly = true;
     engine.setActiveScene('fountain-m2');
 
     const debugPanel = new VFX.FountainDebugPanel(engine, emitter);
 
-    // keep the emitter's normalized geometry responsive to the renderer's actual size
-    let lastW = engine.renderer.width, lastH = engine.renderer.height;
-    let lastQuality = qualityName;
-    const syncFrame = () => {
+    // Resize and quality propagation are now fully engine-driven — Renderer's
+    // ResizeObserver -> Engine -> Scene.resize()/applyQuality() -> emitter (see
+    // vfx-renderer.js, vfx-engine.js, vfx-scene.js — M2 hardening items 2 and 6).
+    // This rAF loop exists ONLY to refresh the dev HUD (which self-throttles to
+    // ~4Hz internally) — nothing functional depends on it anymore.
+    const debugFrame = () => {
       if (!window.VFX_FOUNTAIN_DEMO) return;
-      const w = engine.renderer.width, h = engine.renderer.height;
-      if (w !== lastW || h !== lastH) { emitter.resize(w, h); lastW = w; lastH = h; }
-      const q = engine.diagnostics.quality;
-      if (q !== lastQuality) { emitter.setQualityBudget(VFX.FOUNTAIN_QUALITY_BUDGETS[q] || budget); lastQuality = q; }
       debugPanel.update();
-      requestAnimationFrame(syncFrame);
+      requestAnimationFrame(debugFrame);
     };
-    requestAnimationFrame(syncFrame);
+    requestAnimationFrame(debugFrame);
 
     engine.start();
 
@@ -56,7 +59,7 @@
   function unmount() {
     if (!window.VFX_FOUNTAIN_DEMO) return;
     const { engine, debugPanel, mountEl } = window.VFX_FOUNTAIN_DEMO;
-    window.VFX_FOUNTAIN_DEMO = null; // stop syncFrame's rAF loop first
+    window.VFX_FOUNTAIN_DEMO = null; // stop debugFrame's rAF loop first
     debugPanel.destroy();
     engine.destroy();
     mountEl.remove();

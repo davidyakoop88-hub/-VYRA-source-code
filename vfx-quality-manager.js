@@ -23,15 +23,18 @@ VFX.QualityManager = class QualityManager {
 
   setMode(mode) { this.mode = mode; }
 
-  /** Resolved preset for the current frame — call every tick if mode is AUTO. */
+  /** Resolved preset for the current frame — call every tick if mode is AUTO.
+   * `reducedMotion` on the returned preset lets consumers (e.g. FountainEmitter)
+   * pick a dedicated reduced-motion configuration instead of treating it as just
+   * another name for `low` — see M2 hardening item 13. */
   resolve() {
-    if (this._reducedMotion) return { name: VFX.QualityMode.LOW, ...VFX.QUALITY_PRESETS[VFX.QualityMode.LOW], turbulence: 0 };
+    if (this._reducedMotion) return { name: VFX.QualityMode.LOW, ...VFX.QUALITY_PRESETS[VFX.QualityMode.LOW], turbulence: 0, reducedMotion: true };
     if (this.mode !== VFX.QualityMode.AUTO) {
-      return { name: this.mode, ...VFX.QUALITY_PRESETS[this.mode], turbulence: 1 };
+      return { name: this.mode, ...VFX.QUALITY_PRESETS[this.mode], turbulence: 1, reducedMotion: false };
     }
     this._stepAuto();
     const name = QualityManager.LADDER[this._autoLevel];
-    return { name, ...VFX.QUALITY_PRESETS[name], turbulence: 1 };
+    return { name, ...VFX.QUALITY_PRESETS[name], turbulence: 1, reducedMotion: false };
   }
 
   _stepAuto() {

@@ -15,7 +15,10 @@ VFX.Engine = class Engine {
     this.quality = new VFX.QualityManager(this.perf, opts.quality || VFX.QualityMode.AUTO);
     const initialPreset = this.quality.resolve();
 
-    this.renderer = new VFX.Renderer(this.mountEl, { resolutionScale: initialPreset.resolutionScale });
+    this.renderer = new VFX.Renderer(this.mountEl, {
+      resolutionScale: initialPreset.resolutionScale,
+      onResize: (w, h) => this._handleResize(w, h)
+    });
     this.textures = new VFX.TextureRegistry(this.renderer.app.renderer);
 
     this.scenes = new Map();
@@ -34,21 +37,38 @@ VFX.Engine = class Engine {
   }
 
   createScene(name) {
+    if (this._destroyed) throw new Error('[VFX] Engine is destroyed');
+    if (this.scenes.has(name)) throw new Error(`[VFX] Scene "${name}" already exists — destroy it first or choose a different name`);
     const scene = new VFX.Scene(name);
     this.scenes.set(name, scene);
     return scene;
   }
 
   setActiveScene(name) {
-    if (this.activeScene) this.activeScene.unmount();
+    if (this._destroyed) throw new Error('[VFX] Engine is destroyed');
+    if (this.activeScene?.name === name) return; // already active — avoid a pointless unmount/remount
     const scene = this.scenes.get(name);
-    if (!scene) { this.activeScene = null; return; }
+    if (!scene) throw new Error(`[VFX] Unknown scene "${name}" — call createScene() first`);
+    if (this.activeScene) this.activeScene.unmount();
     scene.mount(this.renderer.stage);
     this.activeScene = scene;
+    // apply the current quality preset immediately rather than waiting for the
+    // next quality *change* — a freshly mounted scene should never render even one
+    // frame at the wrong budget (M2 hardening item 15).
+    scene.applyQuality(this._currentPreset);
   }
 
-  start() { this.ticker.start(); }
+  start() {
+    if (this._destroyed) return;
+    this.ticker.start();
+  }
   stop() { this.ticker.stop(); }
+
+  _handleResize(width, height) {
+    // Renderer -> Engine -> active Scene -> every resizable system (M2 hardening
+    // item 2). Logical (CSS-pixel) dimensions only — see vfx-renderer.js.
+    this.activeScene?.resize(width, height);
+  }
 
   _fixedUpdate(dt) {
     const preset = this.quality.resolve();
@@ -58,11 +78,24 @@ VFX.Engine = class Engine {
     }
     this._currentPreset = preset;
 
+    const scene = this.activeScene;
+    if (!scene) return;
+
+    if (scene.fixedRateOnly) {
+      // opts out of tickSkip entirely (M2 hardening item 3) — tickSkip skips fixed
+      // ticks and replays the backlog as one large effectiveDt jump, which is
+      // visible stutter for a system with no render interpolation. Scenes that set
+      // this (currently the M2 fountain demo) rely on their own quality budget to
+      // scale cost down instead.
+      scene.update(dt, this.ticker.simTime, preset.turbulence);
+      return;
+    }
+
     this._skipCounter++;
     if (this._skipCounter % preset.tickSkip !== 0) return;
     const effectiveDt = dt * preset.tickSkip;
 
-    this.activeScene?.update(effectiveDt, this.ticker.simTime, preset.turbulence);
+    scene.update(effectiveDt, this.ticker.simTime, preset.turbulence);
   }
 
   _render(now) {

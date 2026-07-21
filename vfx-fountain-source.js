@@ -10,11 +10,14 @@ VFX.FountainSource = class FountainSource {
    * @param {PIXI.Container} parent
    * @param {VFX.TextureRegistry} registry
    * @param {number} [tint]
+   * @param {number} [seed] seeds the ray/spark phase offsets so a given emitter
+   *   seed reproduces byte-identical source decoration too (M2 hardening item 4)
    */
-  constructor(parent, registry, tint = 0xb43dff) {
+  constructor(parent, registry, tint = 0xb43dff, seed = 1) {
     this.tint = tint;
     this.container = new PIXI.Container();
     parent.addChild(this.container);
+    const rng = VFX.createRng(seed, 'source');
 
     // core glow
     const glowTex = registry.getGlowCircle('fountain-source-glow', 90);
@@ -54,7 +57,7 @@ VFX.FountainSource = class FountainSource {
       s.blendMode = PIXI.BLEND_MODES.ADD;
       s.x = offset * 22;
       this.container.addChild(s);
-      return { sprite: s, phase: Math.random() * Math.PI * 2, offset };
+      return { sprite: s, phase: rng.next() * Math.PI * 2, offset };
     });
 
     // small burst sparks — fixed count, animated via math (not pooled spawn/despawn)
@@ -69,7 +72,7 @@ VFX.FountainSource = class FountainSource {
       s.tint = tint;
       s.alpha = 0;
       this.container.addChild(s);
-      return { sprite: s, angle: (i / 8) * Math.PI * 2, phase: Math.random() };
+      return { sprite: s, angle: (i / 8) * Math.PI * 2, phase: rng.next() };
     });
 
     this.intensity = 0; // 0..1, driven by the entrance timeline / idle breathing

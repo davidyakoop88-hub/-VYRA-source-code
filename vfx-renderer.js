@@ -8,12 +8,13 @@ window.VFX = window.VFX || {};
 VFX.Renderer = class Renderer {
   /**
    * @param {HTMLElement} mountEl
-   * @param {{resolutionScale?: number}} [opts]
+   * @param {{resolutionScale?: number, onResize?: (width:number, height:number) => void}} [opts]
    */
   constructor(mountEl, opts = {}) {
     if (typeof PIXI === 'undefined') throw new Error('[VFX] PixiJS not loaded — vendor pixi.min.js must load before vfx-renderer.js');
     this.mountEl = mountEl;
     this.resolutionScale = opts.resolutionScale || 1;
+    this._onResize = opts.onResize || null;
 
     const rect = mountEl.getBoundingClientRect();
     this.app = new PIXI.Application({
@@ -51,13 +52,30 @@ VFX.Renderer = class Renderer {
     const h = Math.max(1, Math.round(height));
     if (w === this.app.renderer.screen.width && h === this.app.renderer.screen.height) return;
     this.app.renderer.resize(w, h);
+    // notify Engine (-> active Scene -> every resizable system) with LOGICAL
+    // (CSS-pixel) dimensions — .width/.height below, never renderer.width/height
+    // (physical backing-buffer pixels, resolution-multiplied) — M2 hardening item 2.
+    this._onResize?.(this.width, this.height);
   }
 
+  /**
+   * Changes device-pixel density without touching logical (CSS-pixel) layout size.
+   * Reads renderer.screen (logical) BEFORE mutating resolution, and resize() is
+   * always called with those preserved logical dimensions — never with
+   * renderer.width/height (physical, already resolution-multiplied). That was the
+   * original bug (M2 hardening item 1): resize(renderer.width, renderer.height) fed
+   * physical pixels back in as if they were logical ones, so every quality
+   * transition corrupted the logical screen size by a factor of the *previous*
+   * resolution. Logical size is unchanged by this method by design, so it does not
+   * fire onResize — only _applySize (an actual CSS-box size change) does.
+   */
   setResolutionScale(scale) {
     if (scale === this.resolutionScale) return;
     this.resolutionScale = scale;
+    const logicalWidth = this.app.renderer.screen.width;
+    const logicalHeight = this.app.renderer.screen.height;
     this.app.renderer.resolution = (window.devicePixelRatio || 1) * scale;
-    this.app.renderer.resize(this.app.renderer.width, this.app.renderer.height);
+    this.app.renderer.resize(logicalWidth, logicalHeight);
   }
 
   // .screen is the logical (CSS-pixel) drawing area — the correct space for display-

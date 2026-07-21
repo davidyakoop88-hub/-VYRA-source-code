@@ -73,10 +73,17 @@ VFX.CrystalHeartParticle = class CrystalHeartParticle extends VFX.BaseParticle {
   }
 
   reset(opts) {
+    // swap to the cached texture for this spawn's chosen variant+size BEFORE
+    // super.reset() applies tint/scale — lets the emitter pick a differently-baked
+    // heart per spawn (was previously fixed at pool-prewarm time) so tint never has
+    // to fake a color the baked facets don't already have (M2 hardening item 11).
+    if (opts.texture) this.sprite.texture = opts.texture;
     super.reset(opts);
     this.rotationSpeed = (opts.rotationSpeed ?? 0);
     this.sprite.rotation = opts.rotation ?? 0;
-    this.shimmerPhase = Math.random() * Math.PI * 2;
+    // shimmerPhase comes from the emitter's seeded "shimmer" RNG stream, not
+    // Math.random() — see FountainEmitter._spawnInChannel (M2 hardening item 4).
+    this.shimmerPhase = opts.shimmerPhase ?? 0;
     this.shimmerSpeed = opts.shimmerSpeed ?? 0;
     this.hasTrail = !!opts.hasTrail;
   }

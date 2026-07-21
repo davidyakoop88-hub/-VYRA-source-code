@@ -80,9 +80,12 @@ VFX.FountainDebugPanel = class FountainDebugPanel {
     $('vfxfd-width').oninput = e => { this.emitter.setWidthMultiplier(+e.target.value); $('vfxfd-width-v').textContent = (+e.target.value).toFixed(2); };
     $('vfxfd-quality').onchange = e => {
       const val = e.target.value;
-      if (val === 'auto') { this.engine.quality.setMode(VFX.QualityMode.AUTO); return; }
-      this.engine.quality.setMode(val);
-      this.emitter.setQualityBudget(VFX.FOUNTAIN_QUALITY_BUDGETS[val]);
+      // just tell the engine's QualityManager what mode to use — no direct
+      // emitter.setQualityBudget() call needed. Engine's own _fixedUpdate loop
+      // detects the resolved preset changed on the next tick and calls
+      // emitter.applyQuality() automatically via Scene.applyQuality() (M2
+      // hardening item 6: quality changes are fully engine-driven).
+      this.engine.quality.setMode(val === 'auto' ? VFX.QualityMode.AUTO : val);
     };
     $('vfxfd-lanes').onchange = e => {
       this.lanePathLayer.visible = e.target.checked;
@@ -123,7 +126,7 @@ VFX.FountainDebugPanel = class FountainDebugPanel {
       `source intensity: ${d.sourceIntensity}\n` +
       `lane usage: [${d.laneUsage.join(',')}]\n` +
       `textures: ${d.textureCount} (~${(d.textureMemoryBytes / 1024 / 1024).toFixed(2)}MB)\n` +
-      `forced recycles: ${d.forcedRecycleCount}`;
+      `dropped spawns: ${d.droppedSpawnCount}`;
   }
 
   destroy() {

@@ -15,7 +15,9 @@ VFX.FOUNTAIN_GEOMETRY = Object.freeze({
   removedY: -0.05
 });
 
-/** Cubic bezier evaluation, t in [0,1]. Points are {x,y} in normalized space. */
+/** Cubic bezier evaluation, t in [0,1]. Points are {x,y} in normalized space.
+ * Allocates a fresh {x,y} — fine for one-off callers (e.g. the debug panel's lane
+ * drawing) but NOT for the per-particle hot path; use bezierPointInto for that. */
 VFX.bezierPoint = function (p0, p1, p2, p3, t) {
   const mt = 1 - t;
   const a = mt * mt * mt, b = 3 * mt * mt * t, c = 3 * mt * t * t, d = t * t * t;
@@ -23,6 +25,22 @@ VFX.bezierPoint = function (p0, p1, p2, p3, t) {
     x: a * p0.x + b * p1.x + c * p2.x + d * p3.x,
     y: a * p0.y + b * p1.y + c * p2.y + d * p3.y
   };
+};
+
+/**
+ * Allocation-free cubic bezier evaluation — writes into a caller-owned `out`
+ * ({x,y}) and returns it, instead of allocating a new object every call.
+ * FountainEmitter keeps one reusable scratch object per call site and calls this
+ * every tick for every active particle (up to ~600 at Ultra x 60Hz) — the plain
+ * allocating VFX.bezierPoint would mean tens of thousands of short-lived object
+ * allocations per second there.
+ */
+VFX.bezierPointInto = function (out, p0, p1, p2, p3, t) {
+  const mt = 1 - t;
+  const a = mt * mt * mt, b = 3 * mt * mt * t, c = 3 * mt * t * t, d = t * t * t;
+  out.x = a * p0.x + b * p1.x + c * p2.x + d * p3.x;
+  out.y = a * p0.y + b * p1.y + c * p2.y + d * p3.y;
+  return out;
 };
 
 /**
@@ -50,6 +68,30 @@ VFX.FLOW_LANES = (function () {
     return { index: i, name: d.name, spread: d.spread, points: [p0, p1, p2, p3] };
   });
 })();
+
+/**
+ * Per-lane spawn-frequency weights — center/inner lanes spawn more often than far
+ * outer lanes, matching a natural fountain's denser core (M2 hardening item 5).
+ * Derived from |spread| (0 at center, 1 at the far edges): weight = 1 - 0.55*|spread|,
+ * so center = 1.0, far outer = 0.45 (center is ~2.2x more likely than an outer lane).
+ */
+VFX.LANE_SPAWN_WEIGHTS = VFX.FLOW_LANES.map(lane => 1 - 0.55 * Math.abs(lane.spread));
+
+/**
+ * Weighted lane pick favoring center/inner lanes per VFX.LANE_SPAWN_WEIGHTS.
+ * @param {() => number} randFn returns a value in [0,1)
+ * @returns {number} lane index into VFX.FLOW_LANES
+ */
+VFX.pickWeightedLane = function (randFn) {
+  let total = 0;
+  for (const w of VFX.LANE_SPAWN_WEIGHTS) total += w;
+  let r = randFn() * total, acc = 0;
+  for (let i = 0; i < VFX.LANE_SPAWN_WEIGHTS.length; i++) {
+    acc += VFX.LANE_SPAWN_WEIGHTS[i];
+    if (r <= acc) return i;
+  }
+  return VFX.LANE_SPAWN_WEIGHTS.length - 1;
+};
 
 VFX.FOUNTAIN_SIZE_CATEGORIES = Object.freeze({
   TINY: { min: 10, max: 18 },
@@ -83,5 +125,16 @@ VFX.FOUNTAIN_QUALITY_BUDGETS = {
   low: { maxActive: 120, trailsEnabled: false, trailChance: 0, sparkleDensity: 0.5, textureScale: 0.75, bloomStrength: 0.5, depthParticles: false },
   medium: { maxActive: 220, trailsEnabled: true, trailChance: 0.08, trailLength: 4, sparkleDensity: 0.8, textureScale: 1, bloomStrength: 0.75, depthParticles: true },
   high: { maxActive: 380, trailsEnabled: true, trailChance: 0.16, trailLength: 6, sparkleDensity: 1, textureScale: 1, bloomStrength: 1, depthParticles: true },
-  ultra: { maxActive: 600, trailsEnabled: true, trailChance: 0.24, trailLength: 8, sparkleDensity: 1.2, textureScale: Math.min(2, window.devicePixelRatio || 1), bloomStrength: 1.25, depthParticles: true }
+  ultra: { maxActive: 600, trailsEnabled: true, trailChance: 0.24, trailLength: 8, sparkleDensity: 1.2, textureScale: Math.min(2, window.devicePixelRatio || 1), bloomStrength: 1.25, depthParticles: true },
+  /**
+   * Dedicated reduced-motion configuration (M2 hardening item 13) — distinct from
+   * plain `low`, not just an alias for it. Engine-level turbulence is already forced
+   * to 0 for reduced-motion (see QualityManager.resolve()), which zeroes the
+   * fountain's own drift/shimmer noise "for free" via the turbulence parameter
+   * update() already receives; this budget additionally cuts particle count well
+   * below `low` and removes trails/hero-scale variety entirely, so a
+   * reduced-motion viewer sees a calm, mostly-static-looking trickle rather than a
+   * merely-cheaper version of the full fountain.
+   */
+  reducedMotion: { maxActive: 60, trailsEnabled: false, trailChance: 0, sparkleDensity: 0.3, textureScale: 0.75, bloomStrength: 0.4, depthParticles: false }
 };
