@@ -43,6 +43,14 @@
     return ns;
   }
 
+  function getMapper() {
+    var ns = root.VyraRecognitionCardMapper;
+    if (!ns || typeof ns.map !== 'function') {
+      throw new Error('window.VyraRecognitionCardMapper is not available — load recognition-types.js, recognition-rules.js and recognition-card-mapper.js first');
+    }
+    return ns;
+  }
+
   function makeResult(name, pass, details) {
     return { name: name, pass: !!pass, details: details || '' };
   }
@@ -1170,12 +1178,400 @@
     resetAll(); // leave both shared singletons in a clean state for anything run after this
   }
 
+  // ---- Steg 7: Recognition Card Mapper cases --------------------------------------------
+
+  function makePresentation(event, overrides) {
+    overrides = overrides || {};
+    return {
+      id: overrides.id || ('pres-' + Math.random().toString(36).slice(2, 10)),
+      event: event,
+      startedAt: overrides.startedAt !== undefined ? overrides.startedAt : 1000,
+      durationMs: overrides.durationMs !== undefined ? overrides.durationMs : 3000,
+      endsAt: overrides.endsAt !== undefined ? overrides.endsAt : 4000,
+      status: overrides.status || 'presenting'
+    };
+  }
+
+  function runMapperCases(results) {
+    var mapper = getMapper();
+    mapper.clearStats();
+
+    results.push(runCase('Mapper 1. Join mappas korrekt', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm1', actor: { id: 'a1', username: 'david', displayName: 'David' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      var ok = r.status === 'mapped' && r.model.kind === 'join' && r.model.variant === 'join-soft'
+        && r.model.content.eyebrow === 'WELCOME' && r.model.content.title === 'David'
+        && r.model.content.subtitle === 'joined the live' && r.model.content.countLabel === null && r.model.content.coinLabel === null;
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 2. Like count 1 saknar countLabel', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm2', count: 1, timestamp: 1000 });
+      var r = mapper.map(event);
+      var ok = r.status === 'mapped' && r.model.content.countLabel === null && r.model.content.subtitle === 'sent a like';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 3. Like count over 1 far countLabel', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm3', count: 5, timestamp: 1000 });
+      var r = mapper.map(event);
+      var ok = r.status === 'mapped' && r.model.content.countLabel === '×5' && r.model.content.subtitle === 'sent likes';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 4. Like-pulse variant', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm4', count: 50, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.variant === 'like-pulse', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 5. Like-wave variant', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm5', count: 500, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.variant === 'like-wave', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 6. Like-storm variant', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm6', count: 5000, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.variant === 'like-storm', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 7. Share mappas korrekt', function () {
+      var event = makeMergedEvent({ kind: 'share', id: 'm7', actor: { id: 'a7', username: 'sara', displayName: 'Sara' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      var ok = r.status === 'mapped' && r.model.variant === 'share-signal' && r.model.content.eyebrow === 'SHARE'
+        && r.model.content.subtitle === 'shared the live' && r.model.content.title === 'Sara';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 8. Follow mappas korrekt', function () {
+      var event = makeMergedEvent({ kind: 'follow', id: 'm8', actor: { id: 'a8', username: 'leo', displayName: 'Leo' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      var ok = r.status === 'mapped' && r.model.variant === 'follow-spotlight' && r.model.content.eyebrow === 'NEW FOLLOWER'
+        && r.model.content.subtitle === 'started following';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 9. Small gift mappas korrekt', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm9', gift: { id: 'g9', name: 'Rose', imageUrl: null }, coins: 10, timestamp: 1000 });
+      var r = mapper.map(event);
+      var ok = r.status === 'mapped' && r.model.gift.tier === 'small' && r.model.variant === 'gift-crystal' && r.model.content.eyebrow === 'GIFT';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 10. Medium gift mappas korrekt', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm10', gift: { id: 'g10', name: 'Galaxy', imageUrl: null }, coins: 500, timestamp: 1000 });
+      var r = mapper.map(event);
+      var ok = r.status === 'mapped' && r.model.gift.tier === 'medium' && r.model.variant === 'gift-crown' && r.model.content.eyebrow === 'BIG GIFT';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 11. Large gift mappas korrekt', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm11', gift: { id: 'g11', name: 'Universe', imageUrl: null }, coins: 5000, timestamp: 1000 });
+      var r = mapper.map(event);
+      var ok = r.status === 'mapped' && r.model.gift.tier === 'large' && r.model.variant === 'gift-legendary' && r.model.content.eyebrow === 'LEGENDARY GIFT';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 12. Gift countLabel fungerar', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm12', gift: { id: 'g12', name: 'Rose', imageUrl: null }, coins: 10, count: 3, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.content.countLabel === '×3', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 13. Gift coinLabel fungerar', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm13', gift: { id: 'g13', name: 'Rose', imageUrl: null }, coins: 300, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.content.coinLabel === '300 coins', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 14. Gift utan coins far null coinLabel', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm14', gift: { id: 'g14', name: 'Rose', imageUrl: null }, coins: 0, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.content.coinLabel === null, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 15. CurrentPresentation ger presentationId', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm15', timestamp: 1000 });
+      var presentation = makePresentation(event, { id: 'pres-m15' });
+      var r = mapper.map(presentation);
+      return { pass: r.status === 'mapped' && r.model.metadata.presentationId === 'pres-m15', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 16. CurrentPresentation ger durationMs', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm16', timestamp: 1000 });
+      var presentation = makePresentation(event, { id: 'pres-m16', durationMs: 3000 });
+      var r = mapper.map(presentation);
+      return { pass: r.status === 'mapped' && r.model.metadata.durationMs === 3000, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 17. Direkt MergedEvent ger null presentationId', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm17', timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.metadata.presentationId === null, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 18. Direkt MergedEvent ger null durationMs', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm18', timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.metadata.durationMs === null, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 19. DisplayName anvands fore username', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm19', actor: { id: 'a19', username: 'dyakoop', displayName: 'David Yakoop' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.actor.displayName === 'David Yakoop' && r.model.content.title === 'David Yakoop', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 20. Username anvands som fallback', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm20', actor: { id: 'a20', username: 'sarauser', displayName: '' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.actor.displayName === 'sarauser', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 21. Guest anvands nar bada saknas', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm21', actor: { id: 'a21', username: '', displayName: '' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.actor.displayName === 'Guest', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 22. Initialer fran tva ord', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm22', actor: { id: 'a22', username: 'dy', displayName: 'David Yakoop' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.actor.initials === 'DY', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 23. Initial fran ett ord', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm23', actor: { id: 'a23', username: 'david', displayName: 'David' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.actor.initials === 'D', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 24. Tomt namn ger fragetecken', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm24', actor: { id: 'a24', username: '', displayName: '' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.actor.initials === '?', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 25. Avatar saknas ger null', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm25', actor: { id: 'a25', username: 'x', displayName: 'X', avatarUrl: null }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.actor.avatarUrl === null, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 26. Giftbild saknas ger null', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm26', gift: { id: 'g26', name: 'Rose', imageUrl: null }, coins: 10, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.gift.imageUrl === null, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 27. Input muteras inte', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm27', gift: { id: 'g27', name: 'Rose', imageUrl: null }, coins: 50, timestamp: 1000 });
+      var before = JSON.stringify(event);
+      mapper.map(event);
+      var after = JSON.stringify(event);
+      return { pass: before === after, details: 'before=' + before + ' after=' + after };
+    }));
+
+    results.push(runCase('Mapper 28. Output ar en djup kopia', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm28', timestamp: 1000 });
+      var rA = mapper.map(event);
+      var rB = mapper.map(event);
+      rA.model.actor.displayName = 'MUTATED';
+      rA.model.content.title = 'MUTATED';
+      var ok = rB.model.actor.displayName !== 'MUTATED' && rB.model.content.title !== 'MUTATED';
+      return { pass: ok, details: JSON.stringify({ rA: rA, rB: rB }) };
+    }));
+
+    results.push(runCase('Mapper 29. Okand kind rejected', function () {
+      var event = makeMergedEvent({ kind: 'unknown-thing', id: 'm29', timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'rejected', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 30. Saknat event-id rejected', function () {
+      // makeMergedEvent's own `overrides.id || (...)` treats '' as falsy and would silently
+      // substitute a generated id, so the empty id is set directly on the built event instead.
+      var event = makeMergedEvent({ kind: 'like', timestamp: 1000 });
+      event.id = '';
+      var r = mapper.map(event);
+      return { pass: r.status === 'rejected', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 31. Saknat actor-id rejected', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm31', actor: { id: '', username: 'x', displayName: 'X' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'rejected', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 32. Ogiltig timestamp rejected', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm32', timestamp: NaN });
+      var r = mapper.map(event);
+      return { pass: r.status === 'rejected', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 33. Negativ count rejected', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm33', count: -5, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'rejected', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 34. Negativa coins rejected', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm34', gift: { id: 'g34', name: 'Rose', imageUrl: null }, coins: -10, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'rejected', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 35. Gift utan giftdata rejected', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm35', gift: null, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'rejected', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 36. Formatter ger 999', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm36', count: 999, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.content.countLabel === '×999', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 37. Formatter ger 1K', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm37', count: 1000, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.content.countLabel === '×1K', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 38. Formatter ger 1.2K', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm38', count: 1200, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.content.countLabel === '×1.2K', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 39. Formatter ger 1M', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm39', count: 1000000, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.content.countLabel === '×1M', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 40. Formatter ger 1.2M', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm40', count: 1250000, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.content.countLabel === '×1.2M', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 41. Aria-label for join ar korrekt', function () {
+      var event = makeMergedEvent({ kind: 'join', id: 'm41', actor: { id: 'a41', username: 'david', displayName: 'David' }, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.accessibility.ariaLabel === 'David joined the live', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 42. Aria-label for like anvander fullt tal', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm42', actor: { id: 'a42', username: 'david', displayName: 'David' }, count: 1200, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.accessibility.ariaLabel === 'David sent 1,200 likes', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 43. Aria-label for gift innehaller antal, namn och coins', function () {
+      var event = makeMergedEvent({ kind: 'gift', id: 'm43', actor: { id: 'a43', username: 'david', displayName: 'David' }, gift: { id: 'g43', name: 'Rose', imageUrl: null }, count: 3, coins: 300, timestamp: 1000 });
+      var r = mapper.map(event);
+      return { pass: r.status === 'mapped' && r.model.accessibility.ariaLabel === 'David sent 3 Rose gifts worth 300 coins', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Mapper 44. validateCardModel accepterar korrekt modell', function () {
+      var event = makeMergedEvent({ kind: 'like', id: 'm44', timestamp: 1000 });
+      var r = mapper.map(event);
+      var validation = mapper.validateCardModel(r.model);
+      return { pass: validation.valid === true && validation.errors.length === 0, details: JSON.stringify(validation) };
+    }));
+
+    results.push(runCase('Mapper 45. validateCardModel avvisar felaktig modell', function () {
+      var validation = mapper.validateCardModel({ id: '', kind: 'not-a-kind' });
+      return { pass: validation.valid === false && validation.errors.length > 0, details: JSON.stringify(validation) };
+    }));
+
+    results.push(runCase('Mapper 46. Stats raknas korrekt', function () {
+      mapper.clearStats();
+      mapper.map(makeMergedEvent({ kind: 'join', id: 'st1', timestamp: 1000 }));
+      mapper.map(makeMergedEvent({ kind: 'like', id: 'st2', timestamp: 1000 }));
+      mapper.map(makeMergedEvent({ kind: 'gift', id: 'st3', gift: { id: 'gst', name: 'Rose', imageUrl: null }, coins: 5000, timestamp: 1000 })); // large
+      mapper.map(makeMergedEvent({ kind: 'unknown-thing', id: 'st4', timestamp: 1000 })); // rejected
+      var stats = mapper.getStats();
+      var ok = stats.mapped === 3 && stats.rejected === 1 && stats.join === 1 && stats.like === 1
+        && stats.gift === 1 && stats.largeGift === 1 && stats.smallGift === 0 && stats.mediumGift === 0
+        && stats.share === 0 && stats.follow === 0;
+      return { pass: ok, details: JSON.stringify(stats) };
+    }));
+
+    results.push(runCase('Mapper 47. clearStats fungerar', function () {
+      mapper.map(makeMergedEvent({ kind: 'join', id: 'cs1', timestamp: 1000 }));
+      mapper.clearStats();
+      var stats = mapper.getStats();
+      var expected = { mapped: 0, rejected: 0, join: 0, like: 0, share: 0, follow: 0, gift: 0, smallGift: 0, mediumGift: 0, largeGift: 0 };
+      return { pass: JSON.stringify(stats) === JSON.stringify(expected), details: JSON.stringify(stats) };
+    }));
+
+    results.push(runCase('Mapper 48. Mapper innehaller ingen DOM-kod', function () {
+      var hasDocument = typeof document !== 'undefined';
+      var calls = { createElement: 0, querySelector: 0, getElementById: 0 };
+      var originals = {};
+      if (hasDocument) {
+        originals.createElement = document.createElement;
+        originals.querySelector = document.querySelector;
+        originals.getElementById = document.getElementById;
+        document.createElement = function () { calls.createElement++; return originals.createElement.apply(document, arguments); };
+        document.querySelector = function () { calls.querySelector++; return originals.querySelector.apply(document, arguments); };
+        document.getElementById = function () { calls.getElementById++; return originals.getElementById.apply(document, arguments); };
+      }
+      try {
+        mapper.map(makeMergedEvent({ kind: 'gift', id: 'dom-check', gift: { id: 'gd', name: 'Rose', imageUrl: null }, coins: 500, timestamp: Date.now() }));
+        mapper.mapEvent(makeMergedEvent({ kind: 'like', id: 'dom-check-2', timestamp: Date.now() }));
+        mapper.getVariant(makeMergedEvent({ kind: 'follow', id: 'dom-check-3', timestamp: Date.now() }));
+        mapper.getGiftTier(makeMergedEvent({ kind: 'gift', id: 'dom-check-4', gift: { id: 'gd2', name: 'Rose', imageUrl: null }, coins: 10, timestamp: Date.now() }));
+        mapper.validateCardModel({});
+        mapper.getStats();
+        mapper.clearStats();
+      } finally {
+        if (hasDocument) {
+          document.createElement = originals.createElement;
+          document.querySelector = originals.querySelector;
+          document.getElementById = originals.getElementById;
+        }
+      }
+      var ok = calls.createElement === 0 && calls.querySelector === 0 && calls.getElementById === 0;
+      return { pass: ok, details: JSON.stringify(calls) };
+    }));
+
+    results.push(runCase('Mapper 49. Mapper anvander inga timers', function () {
+      var originalSetTimeout = root.setTimeout;
+      var originalSetInterval = root.setInterval;
+      var originalRAF = root.requestAnimationFrame;
+      var calls = { setTimeout: 0, setInterval: 0, requestAnimationFrame: 0 };
+      if (typeof originalSetTimeout === 'function') root.setTimeout = function () { calls.setTimeout++; return originalSetTimeout.apply(this, arguments); };
+      if (typeof originalSetInterval === 'function') root.setInterval = function () { calls.setInterval++; return originalSetInterval.apply(this, arguments); };
+      if (typeof originalRAF === 'function') root.requestAnimationFrame = function () { calls.requestAnimationFrame++; return originalRAF.apply(this, arguments); };
+      try {
+        mapper.map(makeMergedEvent({ kind: 'like', id: 'timer-check', timestamp: Date.now() }));
+        mapper.getStats();
+        mapper.clearStats();
+      } finally {
+        if (typeof originalSetTimeout === 'function') root.setTimeout = originalSetTimeout;
+        if (typeof originalSetInterval === 'function') root.setInterval = originalSetInterval;
+        if (typeof originalRAF === 'function') root.requestAnimationFrame = originalRAF;
+      }
+      var ok = calls.setTimeout === 0 && calls.setInterval === 0 && calls.requestAnimationFrame === 0;
+      return { pass: ok, details: JSON.stringify(calls) };
+    }));
+
+    mapper.clearStats(); // leave the shared singleton clean for anything run after this
+  }
+
   function run() {
     var results = [];
     runNormalizerCases(results);
     runMergeCases(results);
     runQueueCases(results);
     runControllerCases(results);
+    runMapperCases(results);
     return results;
   }
 

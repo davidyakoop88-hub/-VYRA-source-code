@@ -1,7 +1,8 @@
-// recognition-rules.js — Recognition Engine, pure configuration (Steg 4 + 5 + 6).
+// recognition-rules.js — Recognition Engine, pure configuration (Steg 4 + 5 + 6 + 7).
 // No logic, no DOM, no timers, no side effects beyond registering window.VyraRecognitionRules.
-// Consumed by recognition-merge.js, recognition-queue.js and recognition-controller.js (and
-// later Filter) — never mutated at runtime; the whole tree is frozen below.
+// Consumed by recognition-merge.js, recognition-queue.js, recognition-controller.js and
+// recognition-card-mapper.js (and later Filter) — never mutated at runtime; the whole tree is
+// frozen below.
 (function (root) {
   'use strict';
 
@@ -72,6 +73,15 @@
       giftSmall: 4500,
       giftMedium: 5500,
       giftLarge: 7000
+    }),
+
+    // recognition-card-mapper.js's like-variant boundaries: count < wave -> 'like-pulse',
+    // wave <= count < storm -> 'like-wave', count >= storm -> 'like-storm'. Gift variants reuse
+    // priority.giftThresholds above instead of a second set defined here — same "don't
+    // duplicate magic boundaries across files" rule this file already follows for gifts.
+    likeVariantThresholds: Object.freeze({
+      wave: 100,
+      storm: 1000
     })
   };
 

@@ -142,3 +142,55 @@
  * @property {string} [reason]
  * @property {*} [result]
  */
+
+/**
+ * @typedef {Object} CardModelActor
+ * @property {string} id
+ * @property {string} username
+ * @property {string} displayName
+ * @property {?string} avatarUrl
+ * @property {string} initials
+ */
+
+/**
+ * @typedef {Object} CardModelGift
+ * @property {string} id
+ * @property {string} name
+ * @property {?string} imageUrl
+ * @property {'small'|'medium'|'large'} tier
+ */
+
+/**
+ * @typedef {Object} CardModelContent
+ * @property {string} eyebrow
+ * @property {string} title
+ * @property {string} subtitle
+ * @property {?string} countLabel
+ * @property {?string} coinLabel
+ */
+
+/**
+ * @typedef {Object} CardModelMetadata
+ * @property {string} sourceEventId
+ * @property {?string} presentationId
+ * @property {number} timestamp
+ * @property {?number} durationMs
+ * @property {number} count
+ * @property {number} coins
+ * @property {number} mergedCount
+ */
+
+/**
+ * Output of recognition-card-mapper.js (Steg 7) — the ONE shape recognition-card.js will ever
+ * render. Plain text only everywhere (no HTML/markup) so the Card component can safely treat
+ * every string field as text content, never innerHTML.
+ * @typedef {Object} CardModel
+ * @property {string} id
+ * @property {RecognitionEventKind} kind
+ * @property {string} variant
+ * @property {CardModelActor} actor
+ * @property {?CardModelGift} gift
+ * @property {CardModelContent} content
+ * @property {{ariaLabel: string}} accessibility
+ * @property {CardModelMetadata} metadata
+ */
