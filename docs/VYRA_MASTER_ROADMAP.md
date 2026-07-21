@@ -13,7 +13,7 @@ Status legend: `done` / `in-progress` / `not-started` / `blocked`.
 | 0 | Repository audit | done | — | Baseline recorded in `VYRA_PROJECT_STATE.md`; no unrelated fixes made during audit | (docs only, this commit) | Audit was grep-based/targeted, not an exhaustive per-file manual read — deeper issues may surface later |
 | 1 | Standalone Recognition Runtime | done | Recognition Steg 1-8 (Types/Rules/Normalizer/Merge/Queue/Controller/Mapper/Card) | 242/242 automated cases pass (Node+browser); manual demo pass covers join/like-burst/mixed-priority/stress/pause-resume/stop/clear/destroy; zero console errors; media.js/studio.html untouched | `540eaac` | None currently open |
 | 2 | Runtime hardening | done | Phase 1 | 500-mixed-event stress test passes; repeated start/stop and mount/clear cycles leave no leaked subscriptions/state; `?recognitiondebug=1` diagnostics mode exists and is provably inert without the flag; `docs/recognition-runtime-report.md` written | (Phase 2 commit, see `VYRA_PROJECT_STATE.md`) | No defects found; JS-heap-level leak profiling not available in this environment — deferred to Phase 18 which has real perf tooling |
-| 3 | Generic live event adapter contract | not-started | Phase 2 | `recognition-adapter.js`/`recognition-adapter-types.js` define a provider-agnostic connect/disconnect/event-envelope contract; zero TikTok-specific logic inside it; adapter demo shows a fake provider driving the Recognition Runtime end-to-end | — | Must not duplicate or bypass the existing `server.ps1`/`live-client.js` transport — this phase defines the *contract*, Phase 4 does the real TikTok wiring |
+| 3 | Generic live event adapter contract | done | Phase 2 | `recognition-adapter.js`/`recognition-adapter-types.js` define a provider-agnostic connect/disconnect/event-envelope contract; zero TikTok-specific logic inside it; adapter demo shows a fake provider driving the Recognition Runtime end-to-end | (Phase 3 commit, see `VYRA_PROJECT_STATE.md`) | Contract is a factory (multiple independent instances), unlike every other Recognition Engine singleton — intentional, since more than one live connection may exist at once |
 | 4 | TikTok LIVE adapter | not-started | Phase 3; existing `tiktok-bridge/bridge.js` transport | Real or simulated TikTok events flow through Normalizer → Recognition Runtime, never touching the Card directly; gift streaks don't double-count; simulation mode works without a live session | — | `tiktok-live-connector` is an **unofficial** library — no official TikTok API exists; document this limitation prominently, do not imply an official integration |
 | 5 | Overlay Runtime | not-started | Phase 1 (Recognition Runtime), Phase 8 (VFX, can be stubbed initially) | `window.VyraOverlayRuntime` coordinates layers (background/ambient/recognition/event-fx/multiplier/MVP/campaign/diagnostics) with one owner per animation loop; no duplicate mounts; responsive across 9:16/16:9/square/custom | — | Must not introduce a second competing animation loop alongside `vfx-ticker.js` |
 | 6 | Overlay Editor | not-started | Phase 5 | Layer list, visibility/lock toggles, drag/resize/snap/align, safe-area viz, device presets, undo/redo, browser-source URL generation; editor interactions provably inert in exported browser-source mode | — | Existing `studio.html?overlay=1` mode and editor mode share one page — must not let editor-only listeners leak into overlay-output mode (regression risk against everything built so far) |
@@ -36,10 +36,10 @@ Status legend: `done` / `in-progress` / `not-started` / `blocked`.
 
 ## Next recommended task
 
-**Phase 3 — Generic Live Event Adapter Contract.** Phases 0-2 are complete and verified.
-Phase 3 has no unresolved product-level blockers and builds the provider-agnostic boundary
-that Phase 4 (TikTok) will implement against — sequencing it first avoids baking
-TikTok-specific assumptions into the adapter contract. See `VYRA_PROJECT_STATE.md` →
+**Phase 4 — TikTok LIVE Adapter.** Phases 0-3 are complete and verified. Phase 4 builds on
+the now-ready generic adapter contract and the already-existing, already-working transport
+(`tiktok-bridge/bridge.js` → `server.ps1` → `live-client.js`) — inspect that transport
+thoroughly before writing any code, per working rule #1/#2. See `VYRA_PROJECT_STATE.md` →
 "Exact next action" for the specific work items.
 
 ## Open decisions requiring the user (not resolved unilaterally)

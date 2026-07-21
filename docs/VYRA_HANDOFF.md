@@ -41,9 +41,9 @@ node bridge.js <tiktok_username_without_@>
 ## How to run the only existing automated tests
 
 ```
-node -e "require('./recognition-types.js');require('./recognition-rules.js');require('./recognition-normalizer.js');require('./recognition-merge.js');require('./recognition-queue.js');require('./recognition-controller.js');require('./recognition-card-mapper.js');require('./recognition-card.js');require('./recognition-runtime.js');require('./recognition-verify.js').run().then(r=>console.log(r.filter(x=>x.pass).length+'/'+r.length))"
+node -e "require('./recognition-types.js');require('./recognition-rules.js');require('./recognition-normalizer.js');require('./recognition-merge.js');require('./recognition-queue.js');require('./recognition-controller.js');require('./recognition-card-mapper.js');require('./recognition-card.js');require('./recognition-runtime.js');require('./recognition-adapter-types.js');require('./recognition-adapter.js');require('./recognition-verify.js').run().then(r=>console.log(r.filter(x=>x.pass).length+'/'+r.length))"
 ```
-Expected: `242/242` as of the latest commit on this branch. Or open
+Expected: `262/262` as of the latest commit on this branch. Or open
 `recognition-verify.html` via the dev server and read `#summary`.
 
 ## What's done
@@ -51,13 +51,17 @@ Expected: `242/242` as of the latest commit on this branch. Or open
 See `VYRA_PROJECT_STATE.md` → "Completed systems". In short: the full widget/theme catalog,
 the design-system migration, the VFX Engine (M1/M2/hardening/visual QA), and the full
 Recognition Engine including the standalone Recognition Runtime (Roadmap Phase 1, commit
-`540eaac`).
+`540eaac`), Runtime Hardening (Phase 2, commit `f022cf0`), and the Generic Live Event Adapter
+Contract (Phase 3, `recognition-adapter.js`/`recognition-adapter-types.js`/
+`recognition-adapter-demo.html`).
 
 ## What's next
 
-`VYRA_PROJECT_STATE.md` → "Exact next action": **Phase 2 — Runtime Hardening** on
-`recognition-runtime.js` (500-event stress test, repeated start/stop and mount/clear cycle
-checks, `?recognitiondebug=1` diagnostics mode, `docs/recognition-runtime-report.md`).
+`VYRA_PROJECT_STATE.md` → "Exact next action": **Phase 4 — TikTok LIVE Adapter**. Inspect the
+existing transport (`tiktok-bridge/bridge.js` + `server.ps1` + `live-client.js`) before
+writing code; build `tiktok-live-adapter.js` (registers a `'tiktok'` provider against the
+Phase 3 adapter contract) and `tiktok-live-normalizer.js` (TikTok payload → NormalizedEvent),
+with a simulation mode for development without a live session.
 
 ## Rules this project follows (do not violate these when continuing)
 
@@ -99,6 +103,6 @@ If starting a fresh session to continue this work, paste:
 > `docs/VYRA_MASTER_ROADMAP.md`, `docs/VYRA_ARCHITECTURE.md`, and `docs/VYRA_HANDOFF.md`
 > first. Do not assume any file/API exists — verify against the actual repository at
 > `C:\Users\A\Desktop\vyra\VYRA-source-code-2026-07-14` on branch `feature/vyra-vfx-engine`.
-> Follow the working rules listed in `VYRA_HANDOFF.md`. Complete Phase 2 (Runtime Hardening),
-> run tests, commit with message `fix(recognition): harden runtime lifecycle and failure
-> handling`, update the four project-management docs, then continue to Phase 3.
+> Follow the working rules listed in `VYRA_HANDOFF.md`. Complete Phase 4 (TikTok LIVE
+> Adapter), run tests, commit with message `feat(tiktok): connect live events to recognition
+> runtime`, update the four project-management docs, then continue to Phase 5.

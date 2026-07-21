@@ -1,6 +1,6 @@
 # VYRA Project State
 
-Last updated: 2026-07-22 (Phase 0 audit + Phase 1 confirmation).
+Last updated: 2026-07-22 (Phase 3 — Generic Live Event Adapter Contract).
 
 ## Current branch
 
@@ -8,11 +8,11 @@ Last updated: 2026-07-22 (Phase 0 audit + Phase 1 confirmation).
 
 ## Latest verified commit
 
-Phase 2 (Runtime Hardening) commit — see git log for exact SHA after push;
-prior verified commit was `540eaac4788e04c286d716b3bc914ac5982edcf8` —
-`feat(recognition): add standalone recognition runtime`
-(pushed; local HEAD confirmed equal to `origin/feature/vyra-vfx-engine`).
-Phase 0 docs landed at `21cffb8` (`docs: add VYRA project roadmap and implementation state`).
+Phase 3 (Generic Live Event Adapter Contract) commit — see git log for exact SHA after push.
+Prior verified commits: `f022cf0` (Phase 2, `fix(recognition): harden runtime lifecycle and
+failure handling`), `21cffb8` (Phase 0 docs), `540eaac` (Phase 1,
+`feat(recognition): add standalone recognition runtime`). Local HEAD confirmed equal to
+`origin/feature/vyra-vfx-engine` after each push.
 
 Working tree at audit time: clean except pre-existing unrelated untracked items
 (`.claude/agents/`, `.claude/data/`, `assets/gifts/`, `assets/images/test/` — not created by
@@ -53,19 +53,50 @@ this roadmap, left untouched).
   errors. No Runtime defects found; `?recognitiondebug=1` diagnostics mode already existed
   from earlier steps and was confirmed inert-by-default and correctly wired into every
   caught-error path.
-- **Phase 3 — Generic adapter contract**: not started. No `recognition-adapter.js` exists.
+- **Phase 3 — Generic adapter contract**: done. `recognition-adapter-types.js` +
+  `recognition-adapter.js` implement a provider-agnostic, FACTORY-style contract (unlike
+  every other Recognition Engine file, `create()` returns a fresh, independent instance each
+  call — no shared singleton). Public API: `window.VyraRecognitionAdapter = {create,
+  registerProvider, getProviders}`; each instance exposes `{connect, disconnect, isConnected,
+  getState, getStats, subscribe, destroy}`. Zero TikTok-specific logic anywhere in either
+  file — confirmed by construction (payload is always treated as opaque). Bounded, cancellable
+  reconnect backoff is opt-in per instance (`options.reconnect = {enabled, baseDelayMs,
+  maxDelayMs, maxAttempts}`, disabled by default), implemented with a single stored
+  `setTimeout` handle cleared on `disconnect()`/`destroy()` — the one legitimate timer in this
+  module, unlike the Runtime pipeline which has none at all.
+  `recognition-adapter-demo.html` registers ONE generic "demo-fake-provider" (zero
+  platform-specific logic — the only provider-specific code lives in the demo page's own
+  script, not in `recognition-adapter.js`) and demonstrates the intended Phase 4 integration
+  pattern: raw provider event → adapter envelope → demo-only translation into a
+  NormalizedEvent → `window.VyraRecognitionRuntime.push(...)`. **Verified this session**:
+  16 new automated cases (`Adapter 1-16`) — connection lifecycle, duplicate connect/
+  disconnect, malformed provider events, subscriber error isolation, bounded reconnect with
+  successful re-connection, cancellable reconnect, async provider connect failure, synchronous
+  provider connect() that throws, destroy idempotency/permanence, and a structural boundary
+  check proving a raw adapter envelope is never itself acceptable as a NormalizedEvent (a
+  caller must always normalize it first). 262/262 total cases pass (Node + browser), zero
+  console errors. Manual demo pass confirmed: connect → emit join → normalize → Runtime push
+  (`queued`) → tick → presentation starts → Card renders ("David Yakoop joined the live") →
+  tick-to-end → clean completion; malformed event rejected without crash; unexpected
+  disconnect handled cleanly with no auto-reconnect (demo's reconnect policy left disabled).
 - **Phase 4 — TikTok LIVE adapter**: not started as a Recognition-Runtime-facing adapter.
   The **transport** already exists and works (`tiktok-bridge/bridge.js` →
   `tiktok-live-connector` → `server.ps1` → `live-client.js`), but nothing bridges
-  `live-client.js`'s raw events into `window.VyraRecognitionRuntime.push(...)` yet.
+  `live-client.js`'s raw events into `window.VyraRecognitionRuntime.push(...)` yet. Phase 3's
+  generic adapter contract is now ready for a `tiktok-live-adapter.js` provider registration to
+  build on.
 - **Phases 5-22**: not started. See `VYRA_MASTER_ROADMAP.md` for full breakdown, dependencies,
   and the flagged architecture conflict (local-first app vs. multi-tenant SaaS model implied
   by Phase 14+).
 
 ## Failing tests
 
-None. `recognition-verify.js` reports 246/246 in both Node and browser as of the Phase 2
-hardening pass (up from 242/242 at Phase 1, +4 new hardening cases).
+None. `recognition-verify.js` reports 262/262 in both Node and browser as of the Phase 3
+adapter pass (up from 246/246 at Phase 2, +16 new adapter cases). One test-authoring bug was
+found and fixed while writing the new cases (not an adapter defect): "Adapter 11" originally
+asserted `state.reconnectAttempt >= 1` after a successful reconnect, but `reconnectAttempt`
+correctly resets to 0 on reconnect success (standard backoff-reset-on-success semantics) —
+fixed to assert on the cumulative `stats.reconnectsAttempted` instead, which never resets.
 No other automated test suite exists in the repository (confirmed — no `package.json` test
 script at root, no Jest/Mocha/Vitest config anywhere).
 
@@ -100,10 +131,13 @@ user before Phase 14 begins — not before.
 
 ## Exact next action
 
-Begin **Phase 3 — Generic Live Event Adapter Contract**: create `recognition-adapter.js`,
-`recognition-adapter-types.js`, and `recognition-adapter-demo.html` defining a
-provider-agnostic connect/disconnect/event-envelope contract (`window.VyraRecognitionAdapter
-= {create, registerProvider, getProviders}`), with zero TikTok-specific logic. Add adapter
-lifecycle tests (connection lifecycle, duplicate connect/disconnect, malformed provider
-events, subscriber error isolation, reconnect state) to `recognition-verify.js`, run tests,
-and commit as `feat(recognition): add generic live event adapter contract`.
+Begin **Phase 4 — TikTok LIVE Adapter**: first inspect the existing transport
+(`tiktok-bridge/bridge.js` + `server.ps1` + `live-client.js`) in detail before writing any
+code — do not invent a second connection mechanism. Build `tiktok-live-adapter.js` (registers
+a `'tiktok'` provider with `window.VyraRecognitionAdapter.registerProvider`, wrapping the
+existing `/api/events` polling transport — or a direct `tiktok-live-connector` integration if
+that turns out to be more appropriate after inspection — behind the Phase 3 adapter contract)
+and `tiktok-live-normalizer.js` (converts TikTok-shaped payloads into `NormalizedEvent`,
+handling gift-streak non-double-counting, safe identity fallbacks, and image URL validation).
+Support a simulation mode so development doesn't require a live TikTok session. Add tests,
+run them, and commit as `feat(tiktok): connect live events to recognition runtime`.

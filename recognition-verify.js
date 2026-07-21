@@ -67,6 +67,14 @@
     return ns;
   }
 
+  function getAdapter() {
+    var ns = root.VyraRecognitionAdapter;
+    if (!ns || typeof ns.create !== 'function') {
+      throw new Error('window.VyraRecognitionAdapter is not available — load recognition-adapter-types.js and recognition-adapter.js first');
+    }
+    return ns;
+  }
+
   function hasDom() {
     return typeof document !== 'undefined';
   }
@@ -2856,6 +2864,299 @@
     }
   }
 
+  // ---- Roadmap Phase 3: Generic Live Event Adapter cases -------------------------------
+  // Unlike every stage above, recognition-adapter.js is a FACTORY (create() returns a fresh,
+  // independent instance every call) rather than one shared singleton — so, unlike Runtime,
+  // these cases need no shared-state reset/reordering discipline; each case builds its own
+  // isolated provider + instance and disposes of it at the end.
+
+  function runAdapterCases(results) {
+    var adapter = getAdapter();
+    var providerCounter = 0;
+
+    // A minimal, generic, synchronous fake provider — deliberately has zero TikTok/platform
+    // logic, matching the "no TikTok payload logic inside the generic adapter" rule. Captures
+    // the AdapterProviderContext handed to it so a test can call context.emit/reportError/
+    // reportUnexpectedDisconnect on demand, simulating whatever a real provider would do.
+    function registerSyncProvider() {
+      providerCounter += 1;
+      var name = 'test-sync-provider-' + providerCounter;
+      var lastContext = null;
+      var disconnectCalls = 0;
+      adapter.registerProvider(name, function () {
+        return {
+          connect: function (context) { lastContext = context; },
+          disconnect: function () { disconnectCalls += 1; }
+        };
+      });
+      return { name: name, getContext: function () { return lastContext; }, getDisconnectCalls: function () { return disconnectCalls; } };
+    }
+
+    function registerAsyncProvider(shouldResolve) {
+      providerCounter += 1;
+      var name = 'test-async-provider-' + providerCounter;
+      var lastContext = null;
+      adapter.registerProvider(name, function () {
+        return {
+          connect: function (context) {
+            lastContext = context;
+            return new Promise(function (resolve, reject) {
+              setTimeout(function () { shouldResolve ? resolve() : reject(new Error('simulated connect failure')); }, 5);
+            });
+          },
+          disconnect: function () {}
+        };
+      });
+      return { name: name, getContext: function () { return lastContext; } };
+    }
+
+    function registerThrowingProvider() {
+      providerCounter += 1;
+      var name = 'test-throwing-provider-' + providerCounter;
+      adapter.registerProvider(name, function () {
+        return {
+          connect: function () { throw new Error('boom-connect'); },
+          disconnect: function () {}
+        };
+      });
+      return { name: name };
+    }
+
+    results.push(runCase('Adapter 1. registerProvider + getProviders', function () {
+      var before = adapter.getProviders().length;
+      var provider = registerSyncProvider();
+      var after = adapter.getProviders();
+      var ok = after.length === before + 1 && after.indexOf(provider.name) !== -1;
+      return { pass: ok, details: JSON.stringify({ before: before, after: after }) };
+    }));
+
+    results.push(runCase('Adapter 2. create med okand provider ger null, ingen krasch', function () {
+      var threw = false;
+      var instance = null;
+      try { instance = adapter.create('this-provider-does-not-exist'); } catch (err) { threw = true; }
+      var ok = threw === false && instance === null;
+      return { pass: ok, details: 'threw=' + threw + ' instance=' + instance };
+    }));
+
+    results.push(runCase('Adapter 3. create ger en instans med korrekt API-yta', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      var ok = !!instance
+        && typeof instance.connect === 'function' && typeof instance.disconnect === 'function'
+        && typeof instance.isConnected === 'function' && typeof instance.getState === 'function'
+        && typeof instance.getStats === 'function' && typeof instance.subscribe === 'function';
+      instance && instance.destroy();
+      return { pass: ok, details: 'ok=' + ok };
+    }));
+
+    results.push(runCase('Adapter 4. connect med synkron provider gar till connected', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      var events = [];
+      instance.subscribe(function (n) { events.push(n.type); });
+      instance.connect();
+      var state = instance.getState();
+      var ok = state.connectionState === 'connected' && state.connected === true
+        && events.indexOf('connect-attempt') !== -1 && events.indexOf('connected') !== -1;
+      instance.destroy();
+      return { pass: ok, details: JSON.stringify({ state: state, events: events }) };
+    }));
+
+    results.push(runCase('Adapter 5. disconnect fungerar och ger disconnected-state', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      instance.connect();
+      var r = instance.disconnect();
+      var state = instance.getState();
+      var ok = r.status === 'disconnected' && state.connectionState === 'disconnected' && state.connected === false;
+      instance.destroy();
+      return { pass: ok, details: JSON.stringify({ result: r, state: state }) };
+    }));
+
+    results.push(runCase('Adapter 6. Dubbel connect ar sakert (ingen dubbel anslutning)', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      instance.connect();
+      var statsAfterFirst = instance.getStats().connectAttempts;
+      var r2 = instance.connect();
+      var statsAfterSecond = instance.getStats().connectAttempts;
+      var ok = r2.status === 'already-connected' && statsAfterFirst === statsAfterSecond;
+      instance.destroy();
+      return { pass: ok, details: JSON.stringify({ r2: r2, statsAfterFirst: statsAfterFirst, statsAfterSecond: statsAfterSecond }) };
+    }));
+
+    results.push(runCase('Adapter 7. Dubbel disconnect ar sakert', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      instance.connect();
+      instance.disconnect();
+      var r2 = instance.disconnect();
+      var ok = r2.status === 'already-disconnected';
+      instance.destroy();
+      return { pass: ok, details: JSON.stringify(r2) };
+    }));
+
+    results.push(runCase('Adapter 8. Felformat provider-event avvisas utan krasch', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      var errorEvents = [];
+      var dataEvents = [];
+      instance.subscribe(function (n) { if (n.type === 'error') errorEvents.push(n); if (n.type === 'event') dataEvents.push(n); });
+      instance.connect();
+      var context = provider.getContext();
+      var threw = false;
+      try {
+        context.emit('', { x: 1 });      // empty providerEvent
+        context.emit(null, { x: 1 });    // non-string providerEvent
+        context.emit(42, { x: 1 });      // non-string providerEvent
+      } catch (err) { threw = true; }
+      var statsAfter = instance.getStats();
+      var ok = threw === false && dataEvents.length === 0 && errorEvents.length === 3 && statsAfter.eventsRejected === 3;
+      instance.destroy();
+      return { pass: ok, details: JSON.stringify({ threw: threw, errorEvents: errorEvents.length, dataEvents: dataEvents.length, stats: statsAfter }) };
+    }));
+
+    results.push(runCase('Adapter 9. Giltigt provider-event ger korrekt envelope och djupkopierad payload', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      var received = null;
+      instance.subscribe(function (n) { if (n.type === 'event') received = n.envelope; });
+      instance.connect();
+      var context = provider.getContext();
+      var originalPayload = { nested: { value: 42 } };
+      context.emit('some-provider-event', originalPayload, 12345);
+      var ok = !!received
+        && received.provider === provider.name
+        && received.providerEvent === 'some-provider-event'
+        && received.receivedAt === 12345
+        && received.connectionId === instance.getState().connectionId
+        && JSON.stringify(received.payload) === JSON.stringify(originalPayload)
+        && received.payload !== originalPayload; // deep-cloned, not the same reference
+      instance.destroy();
+      return { pass: ok, details: JSON.stringify(received) };
+    }));
+
+    results.push(runCase('Adapter 10. Subscriber-fel isoleras (kraschar inte andra subscribers)', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      var secondCalls = 0;
+      instance.subscribe(function () { throw new Error('boom-subscriber'); });
+      instance.subscribe(function () { secondCalls += 1; });
+      var threw = false;
+      try { instance.connect(); } catch (err) { threw = true; }
+      var ok = threw === false && secondCalls >= 2; // connect-attempt + connected
+      instance.destroy();
+      return { pass: ok, details: 'threw=' + threw + ' secondCalls=' + secondCalls };
+    }));
+
+    results.push(runCase('Adapter 11. Oplanerad disconnect med reconnect-policy aterensluter (bounded backoff)', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name, { reconnect: { enabled: true, baseDelayMs: 5, maxDelayMs: 20, maxAttempts: 3 } });
+      var events = [];
+      instance.subscribe(function (n) { events.push(n.type); });
+      instance.connect();
+      var context = provider.getContext();
+      context.reportUnexpectedDisconnect();
+      var stateRightAfter = instance.getState();
+      return wait(60).then(function () {
+        var stateAfterWait = instance.getState();
+        var statsAfterWait = instance.getStats();
+        // reconnectAttempt itself resets to 0 on a successful reconnect (by design — mirrors
+        // standard backoff-reset-on-success semantics), so success is verified via the
+        // cumulative `reconnectsAttempted` stat instead, which never resets.
+        var ok = stateRightAfter.reconnectScheduled === true
+          && events.indexOf('reconnect-scheduled') !== -1
+          && events.indexOf('reconnect-attempt') !== -1
+          && stateAfterWait.connectionState === 'connected'
+          && statsAfterWait.reconnectsAttempted >= 1;
+        instance.destroy();
+        return { pass: ok, details: JSON.stringify({ stateRightAfter: stateRightAfter, stateAfterWait: stateAfterWait, statsAfterWait: statsAfterWait, events: events }) };
+      });
+    }));
+
+    results.push(runCase('Adapter 12. Reconnect kan avbrytas (disconnect() innan den hinner fyra)', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name, { reconnect: { enabled: true, baseDelayMs: 50, maxDelayMs: 200, maxAttempts: 3 } });
+      instance.connect();
+      var context = provider.getContext();
+      context.reportUnexpectedDisconnect();
+      var scheduledRightAfter = instance.getState().reconnectScheduled;
+      instance.disconnect(); // must cancel the pending reconnect timer
+      return wait(80).then(function () {
+        var events = [];
+        var unsub = instance.subscribe(function (n) { events.push(n.type); });
+        return wait(10).then(function () {
+          unsub();
+          var finalState = instance.getState();
+          var ok = scheduledRightAfter === true && finalState.reconnectScheduled === false && finalState.connectionState === 'disconnected';
+          instance.destroy();
+          return { pass: ok, details: JSON.stringify({ scheduledRightAfter: scheduledRightAfter, finalState: finalState }) };
+        });
+      });
+    }));
+
+    results.push(runCase('Adapter 13. Asynkron provider som avvisar -> error-state, ingen krasch', function () {
+      var provider = registerAsyncProvider(false);
+      var instance = adapter.create(provider.name);
+      instance.connect();
+      return wait(30).then(function () {
+        var state = instance.getState();
+        var stats = instance.getStats();
+        var ok = state.connectionState === 'error' && typeof state.lastError === 'string' && stats.connectFailures === 1;
+        instance.destroy();
+        return { pass: ok, details: JSON.stringify({ state: state, stats: stats }) };
+      });
+    }));
+
+    results.push(runCase('Adapter 14. Provider vars connect() kastar synkront hanteras sakert', function () {
+      var provider = registerThrowingProvider();
+      var instance = adapter.create(provider.name);
+      var threw = false;
+      try { instance.connect(); } catch (err) { threw = true; }
+      var state = instance.getState();
+      var ok = threw === false && state.connectionState === 'error' && instance.getStats().connectFailures === 1;
+      instance.destroy();
+      return { pass: ok, details: 'threw=' + threw + ' state=' + JSON.stringify(state) };
+    }));
+
+    results.push(runCase('Adapter 15. destroy ar permanent och saker; anrop efter destroy kastar aldrig', function () {
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      instance.connect();
+      instance.destroy();
+      var threw = false;
+      var connectResult, disconnectResult;
+      try {
+        connectResult = instance.connect();
+        disconnectResult = instance.disconnect();
+        instance.destroy(); // repeated destroy must also be safe
+      } catch (err) { threw = true; }
+      var ok = threw === false
+        && connectResult.status === 'rejected' && connectResult.reason === 'destroyed'
+        && disconnectResult.status === 'rejected' && disconnectResult.reason === 'destroyed'
+        && instance.getState().destroyed === true;
+      return { pass: ok, details: JSON.stringify({ threw: threw, connectResult: connectResult, disconnectResult: disconnectResult }) };
+    }));
+
+    results.push(runCase('Adapter 16. Adapter-envelope kan inte passera som NormalizedEvent direkt i Runtime', function () {
+      // Structural boundary check: an adapter envelope must be normalized by a provider-specific
+      // normalizer before it can ever reach the Recognition Runtime — this proves the raw
+      // envelope shape alone is never mistakenly accepted as a NormalizedEvent.
+      var runtime = getRuntime();
+      var provider = registerSyncProvider();
+      var instance = adapter.create(provider.name);
+      var envelope = null;
+      instance.subscribe(function (n) { if (n.type === 'event') envelope = n.envelope; });
+      instance.connect();
+      provider.getContext().emit('gift', { username: 'x', giftName: 'Rose', coins: 10 }, 999);
+      var hasNormalizedShape = !!envelope && ('kind' in envelope) && ('actor' in envelope) && ('mergeKey' in envelope);
+      var pushResult = runtime.push(envelope, 999);
+      var ok = hasNormalizedShape === false && pushResult.status === 'rejected';
+      instance.destroy();
+      return { pass: ok, details: JSON.stringify({ envelope: envelope, pushResult: pushResult }) };
+    }));
+  }
+
   // Returns a Promise<Array<{name, pass, details}>>. `caseThunks` collects the deferred thunks
   // runCase() produces; they are invoked one at a time via reduce, each awaited to completion
   // (including any real wait()) before the next one starts — strict serial order, required
@@ -2869,6 +3170,7 @@
     runMapperCases(caseThunks);
     runCardCases(caseThunks);
     runRuntimeCases(caseThunks);
+    runAdapterCases(caseThunks);
 
     var output = [];
     return caseThunks.reduce(function (chain, thunk) {
