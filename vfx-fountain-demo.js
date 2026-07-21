@@ -15,6 +15,13 @@
 
     const engine = new VFX.Engine({ mountEl, quality: VFX.QualityMode.AUTO, debug: false });
 
+    // dev-only visual QA hook: ?vfxdemo=2&forceReducedMotion=1 forces the reduced-
+    // motion path without needing a real OS accessibility setting change. Same
+    // code path as a genuine prefers-reduced-motion match — see QualityManager.
+    if (new URLSearchParams(location.search).get('forceReducedMotion') === '1') {
+      engine.quality._reducedMotion = true;
+    }
+
     const qualityName = engine.diagnostics.quality;
     const budget = VFX.FOUNTAIN_QUALITY_BUDGETS[qualityName] || VFX.FOUNTAIN_QUALITY_BUDGETS.high;
 

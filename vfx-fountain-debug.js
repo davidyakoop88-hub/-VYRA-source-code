@@ -59,7 +59,7 @@ VFX.FountainDebugPanel = class FountainDebugPanel {
         </select>
       </label>
       <label style="display:flex;align-items:center;gap:6px;margin-top:6px">
-        <input id="vfxfd-lanes" type="checkbox"> show lane paths
+        <input id="vfxfd-lanes" type="checkbox"> show lane paths + zones
       </label>
       <button id="vfxfd-clear" style="width:100%;margin-top:8px">🗑 Clear scene</button>
     `;
@@ -94,17 +94,46 @@ VFX.FountainDebugPanel = class FountainDebugPanel {
     $('vfxfd-clear').onclick = () => this.emitter.clear();
   }
 
+  /** Draws the 7 bezier lanes, the source spawn point/zone, and the fade/removal
+   * boundary lines — all debug-only overlay geometry gated behind the single
+   * "show lane paths + zones" checkbox. Visual QA aid only, never drawn outside
+   * ?vfxdemo=2's dev controls. */
   _drawLanes() {
     const g = this.lanePathLayer;
     g.clear();
+    const w = this.emitter.width, h = this.emitter.height;
+    const geo = VFX.FOUNTAIN_GEOMETRY;
+
     const colors = [0xff5f5f, 0xff9f4d, 0xffe14d, 0xffffff, 0x7dd3fc, 0xa78bfa, 0xff8fd8];
     for (const lane of VFX.FLOW_LANES) {
       g.lineStyle(1.5, colors[lane.index % colors.length], 0.5);
       const [p0, p1, p2, p3] = lane.points;
-      const toPx = p => ({ x: p.x * this.emitter.width, y: p.y * this.emitter.height });
+      const toPx = p => ({ x: p.x * w, y: p.y * h });
       const a = toPx(p0), b = toPx(p1), c = toPx(p2), d = toPx(p3);
       g.moveTo(a.x, a.y);
       g.bezierCurveTo(b.x, b.y, c.x, c.y, d.x, d.y);
+    }
+
+    // source spawn point/zone — every particle's pathT=0 origin, radius sized to
+    // the bottom-of-fan half-width so it reads as "the zone lanes fan out from"
+    const sx = geo.sourceX * w, sy = geo.sourceY * h;
+    const spawnR = geo.bottomHalfWidth * w;
+    g.lineStyle(2, 0x39ff8f, 0.8);
+    g.drawCircle(sx, sy, spawnR);
+    g.lineStyle(1, 0x39ff8f, 0.4);
+    g.drawCircle(sx, sy, spawnR * 2);
+
+    // fade-start and full-removal boundary lines (dashed, horizontal)
+    this._dashedHLine(g, geo.topFadeY * h, w, 0xffd23f, 0.7, 'fade start');
+    this._dashedHLine(g, geo.removedY * h, w, 0xff3f6a, 0.7, 'removed');
+  }
+
+  _dashedHLine(g, y, width, color, alpha, _label) {
+    g.lineStyle(1.5, color, alpha);
+    const dash = 10, gap = 6;
+    for (let x = 0; x < width; x += dash + gap) {
+      g.moveTo(x, y);
+      g.lineTo(Math.min(x + dash, width), y);
     }
   }
 
