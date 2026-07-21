@@ -1,7 +1,7 @@
-// recognition-rules.js — Recognition Engine, pure configuration (Steg 4).
+// recognition-rules.js — Recognition Engine, pure configuration (Steg 4 + 5).
 // No logic, no DOM, no timers, no side effects beyond registering window.VyraRecognitionRules.
-// Consumed by recognition-merge.js (and later Filter/Controller) — never mutated at runtime;
-// the whole tree is frozen below.
+// Consumed by recognition-merge.js and recognition-queue.js (and later Filter/Controller) —
+// never mutated at runtime; the whole tree is frozen below.
 (function (root) {
   'use strict';
 
@@ -25,6 +25,39 @@
       join: JOIN_DEDUPE_IS_SESSION_SCOPED,
       follow: 5000,
       share: 5000
+    }),
+
+    // recognition-queue.js's base priorities. Gift has three tiers instead of one flat value —
+    // see giftThresholds below for how a MergedEvent's coins value picks one of them.
+    priority: Object.freeze({
+      base: Object.freeze({
+        join: 20,
+        like: 40,
+        share: 60,
+        follow: 70,
+        giftSmall: 75,
+        giftMedium: 85,
+        giftLarge: 95
+      }),
+      // small: coins < 100, medium: 100 <= coins < 1000, large: coins >= 1000.
+      giftThresholds: Object.freeze({
+        small: 100,
+        medium: 1000
+      })
+    }),
+
+    // recognition-queue.js's per-kind expiration window in ms, applied against
+    // event.timestamp (falling back to enqueuedAt) to compute a QueueItem's expiresAt.
+    expirationMs: Object.freeze({
+      join: 10000,
+      like: 15000,
+      share: 30000,
+      follow: 60000,
+      gift: 90000
+    }),
+
+    queue: Object.freeze({
+      maxLength: 30
     })
   };
 

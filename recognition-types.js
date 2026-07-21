@@ -102,3 +102,15 @@
  * @property {number} lastSeen
  * @property {string[]} sourceEventIds
  */
+
+/**
+ * Internal item shape held by recognition-queue.js (Steg 5). peek()/dequeueNext() unwrap this
+ * down to its plain `event` for callers — only getItems() exposes the full QueueItem, for
+ * introspection/debugging.
+ * @typedef {Object} QueueItem
+ * @property {MergedEvent} event
+ * @property {number} priority
+ * @property {number} enqueuedAt
+ * @property {number} expiresAt
+ * @property {number} sequence
+ */

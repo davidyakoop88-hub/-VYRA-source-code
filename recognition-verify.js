@@ -27,6 +27,14 @@
     return ns;
   }
 
+  function getQueue() {
+    var ns = root.VyraRecognitionQueue;
+    if (!ns || typeof ns.enqueue !== 'function') {
+      throw new Error('window.VyraRecognitionQueue is not available — load recognition-types.js, recognition-rules.js and recognition-queue.js first');
+    }
+    return ns;
+  }
+
   function makeResult(name, pass, details) {
     return { name: name, pass: !!pass, details: details || '' };
   }
@@ -463,10 +471,289 @@
     merge.clear(); // leave the shared singleton in a clean state for anything run after this
   }
 
+  // ---- Steg 5: Priority Queue cases --------------------------------------------
+
+  function makeMergedEvent(overrides) {
+    overrides = overrides || {};
+    var kind = overrides.kind || 'like';
+    var actor = Object.assign({ id: 'actor-1', username: 'user1', displayName: 'User One', avatarUrl: null }, overrides.actor || {});
+    var gift = overrides.gift === undefined ? null : overrides.gift;
+    var timestamp = overrides.timestamp !== undefined ? overrides.timestamp : 1000;
+    var id = overrides.id || ('mrg-evt-' + Math.random().toString(36).slice(2, 10));
+    return {
+      id: id,
+      kind: kind,
+      actor: actor,
+      gift: gift,
+      count: overrides.count !== undefined ? overrides.count : 1,
+      coins: overrides.coins !== undefined ? overrides.coins : 0,
+      timestamp: timestamp,
+      mergeKey: overrides.mergeKey || (kind + ':' + actor.id + (gift ? ':' + gift.id : '')),
+      mergedCount: overrides.mergedCount !== undefined ? overrides.mergedCount : 1,
+      firstSeen: overrides.firstSeen !== undefined ? overrides.firstSeen : timestamp,
+      lastSeen: overrides.lastSeen !== undefined ? overrides.lastSeen : timestamp,
+      sourceEventIds: overrides.sourceEventIds || [id]
+    };
+  }
+
+  function runQueueCases(results) {
+    var queue = getQueue();
+
+    results.push(runCase('Queue 1. Join enqueue/dequeue', function () {
+      queue.clear();
+      var enq = queue.enqueue(makeMergedEvent({ kind: 'join', id: 'j1', timestamp: Date.now() }));
+      var out = queue.dequeueNext();
+      var ok = enq.status === 'enqueued' && !!out && out.kind === 'join' && out.id === 'j1' && queue.size() === 0;
+      return { pass: ok, details: JSON.stringify({ enq: enq, out: out }) };
+    }));
+
+    results.push(runCase('Queue 2. Gift gar fore join', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'j1', timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'g1', gift: { id: 'gg1', name: 'Rose', imageUrl: null }, coins: 10, timestamp: Date.now() }));
+      var first = queue.dequeueNext();
+      var ok = !!first && first.kind === 'gift';
+      return { pass: ok, details: JSON.stringify(first) };
+    }));
+
+    results.push(runCase('Queue 3. Follow gar fore share', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'share', id: 's1', timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'follow', id: 'f1', timestamp: Date.now() }));
+      var first = queue.dequeueNext();
+      var ok = !!first && first.kind === 'follow';
+      return { pass: ok, details: JSON.stringify(first) };
+    }));
+
+    results.push(runCase('Queue 4. Large gift gar fore medium och small gift', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'gs', gift: { id: 'g-s', name: 'Rose', imageUrl: null }, coins: 5, timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'gm', gift: { id: 'g-m', name: 'Galaxy', imageUrl: null }, coins: 500, timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'gl', gift: { id: 'g-l', name: 'Universe', imageUrl: null }, coins: 5000, timestamp: Date.now() }));
+      var order = [queue.dequeueNext().id, queue.dequeueNext().id, queue.dequeueNext().id];
+      var ok = order[0] === 'gl' && order[1] === 'gm' && order[2] === 'gs';
+      return { pass: ok, details: JSON.stringify(order) };
+    }));
+
+    results.push(runCase('Queue 5. Samma prioritet foljer FIFO', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l1', timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l2', timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l3', timestamp: Date.now() }));
+      var order = [queue.dequeueNext().id, queue.dequeueNext().id, queue.dequeueNext().id];
+      var ok = order[0] === 'l1' && order[1] === 'l2' && order[2] === 'l3';
+      return { pass: ok, details: JSON.stringify(order) };
+    }));
+
+    results.push(runCase('Queue 6. peek tar inte bort event', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l1', timestamp: Date.now() }));
+      var p = queue.peek();
+      var ok = !!p && p.id === 'l1' && queue.size() === 1;
+      return { pass: ok, details: JSON.stringify({ p: p, size: queue.size() }) };
+    }));
+
+    results.push(runCase('Queue 7. dequeue tar bort event', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l1', timestamp: Date.now() }));
+      var d = queue.dequeueNext();
+      var ok = !!d && d.id === 'l1' && queue.size() === 0;
+      return { pass: ok, details: JSON.stringify({ d: d, size: queue.size() }) };
+    }));
+
+    results.push(runCase('Queue 8. Pause blockerar dequeue', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l1', timestamp: Date.now() }));
+      queue.pause();
+      var d = queue.dequeueNext();
+      var ok = d === null && queue.size() === 1 && queue.isPaused() === true;
+      queue.resume();
+      return { pass: ok, details: JSON.stringify({ d: d, size: queue.size() }) };
+    }));
+
+    results.push(runCase('Queue 9. Enqueue fungerar under pause', function () {
+      queue.clear();
+      queue.pause();
+      var r = queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l1', timestamp: Date.now() }));
+      var ok = r.status === 'enqueued' && queue.size() === 1;
+      queue.resume();
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Queue 10. Resume aterstaller dequeue', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l1', timestamp: Date.now() }));
+      queue.pause();
+      queue.dequeueNext();
+      queue.resume();
+      var d = queue.dequeueNext();
+      var ok = !!d && d.id === 'l1';
+      return { pass: ok, details: JSON.stringify(d) };
+    }));
+
+    results.push(runCase('Queue 11. Expired join tas bort', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'j1', timestamp: 1000 }));
+      var d = queue.dequeueNext(1000 + 10000);
+      var ok = d === null && queue.size() === 0;
+      return { pass: ok, details: JSON.stringify({ d: d, size: queue.size() }) };
+    }));
+
+    results.push(runCase('Queue 12. Icke-expired join finns kvar', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'j1', timestamp: 1000 }));
+      var p = queue.peek(1000 + 9999);
+      var ok = !!p && p.id === 'j1' && queue.size() === 1;
+      return { pass: ok, details: JSON.stringify({ p: p, size: queue.size() }) };
+    }));
+
+    results.push(runCase('Queue 13. Full ko droppar lagprioriterat nytt event', function () {
+      queue.clear();
+      for (var i = 0; i < 30; i++) queue.enqueue(makeMergedEvent({ kind: 'like', id: 'fill' + i, timestamp: Date.now() }));
+      var r = queue.enqueue(makeMergedEvent({ kind: 'join', id: 'low-new', timestamp: Date.now() }));
+      var ok = r.status === 'dropped' && queue.size() === 30;
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Queue 14. Full ko ersatter lagst prioriterade event med hogre prioritet', function () {
+      queue.clear();
+      for (var i = 0; i < 30; i++) queue.enqueue(makeMergedEvent({ kind: 'like', id: 'fill' + i, timestamp: Date.now() }));
+      var r = queue.enqueue(makeMergedEvent({ kind: 'follow', id: 'high-new', timestamp: Date.now() }));
+      var ok = r.status === 'replaced' && !!r.replacedEvent && r.replacedEvent.kind === 'like' && r.replacedEvent.id === 'fill0' && queue.size() === 30;
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Queue 15. Join kan inte ersatta gift', function () {
+      queue.clear();
+      for (var i = 0; i < 30; i++) queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'giftfill' + i, gift: { id: 'gid' + i, name: 'Rose', imageUrl: null }, coins: 5, timestamp: Date.now() }));
+      var r = queue.enqueue(makeMergedEvent({ kind: 'join', id: 'join-cant', timestamp: Date.now() }));
+      var ok = r.status === 'dropped';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Queue 16. Gift kan ersatta join', function () {
+      queue.clear();
+      for (var i = 0; i < 29; i++) queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'giftfill' + i, gift: { id: 'gid' + i, name: 'Rose', imageUrl: null }, coins: 5, timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'the-join', timestamp: Date.now() }));
+      var r = queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'gift-new', gift: { id: 'gnew', name: 'Universe', imageUrl: null }, coins: 5000, timestamp: Date.now() }));
+      var ok = r.status === 'replaced' && !!r.replacedEvent && r.replacedEvent.kind === 'join' && r.replacedEvent.id === 'the-join';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Queue 17. Maxlangd overskrids aldrig', function () {
+      queue.clear();
+      for (var i = 0; i < 40; i++) queue.enqueue(makeMergedEvent({ kind: 'like', id: 'overfill' + i, timestamp: Date.now() }));
+      var ok = queue.size() === 30 && queue.getStats().length === 30;
+      return { pass: ok, details: 'size=' + queue.size() };
+    }));
+
+    results.push(runCase('Queue 18. clear tommer kon', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'j1', timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'l1', timestamp: Date.now() }));
+      queue.clear();
+      var ok = queue.size() === 0 && queue.getItems().length === 0;
+      return { pass: ok, details: 'size=' + queue.size() };
+    }));
+
+    results.push(runCase('Queue 19. Stats ar korrekta', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'sa1', timestamp: Date.now() })); // enqueued
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'sa2', timestamp: Date.now() })); // enqueued
+      queue.dequeueNext(); // dequeues sa1 (higher priority) -> dequeued=1, only sa2 (join) remains
+      // 29 more likes brings the queue to exactly 30 (1 existing + 29) without ever hitting the
+      // full-queue branch during the loop itself.
+      for (var i = 0; i < 29; i++) queue.enqueue(makeMergedEvent({ kind: 'like', id: 'safill' + i, timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'sa-dropped', timestamp: Date.now() })); // full, priority 20 == sa2's 20 -> dropped
+      var beforeReplace = queue.getStats();
+      queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'sa-replace', gift: { id: 'sag', name: 'Rose', imageUrl: null }, coins: 5000, timestamp: Date.now() })); // full, priority 95 > sa2's 20 -> replaces sa2
+      var stats = queue.getStats();
+      var ok = stats.dequeued === 1 && beforeReplace.dropped === 1 && stats.replaced === 1
+        && stats.enqueued === (2 + 29 + 1) // sa1+sa2, 29 fills, the successful replace also counts as an enqueue
+        && stats.length === queue.size() && stats.length === 30 && stats.paused === false;
+      return { pass: ok, details: JSON.stringify({ beforeReplace: beforeReplace, stats: stats }) };
+    }));
+
+    results.push(runCase('Queue 20. Ogiltig input ger rejected', function () {
+      queue.clear();
+      var inputs = [
+        null, undefined, 'x', 42, {},
+        { id: 'z', kind: 'not-a-kind', actor: { id: 'a', username: '', displayName: 'd', avatarUrl: null }, gift: null, count: 1, coins: 0, timestamp: 1, mergeKey: 'x', mergedCount: 1, firstSeen: 1, lastSeen: 1, sourceEventIds: [] },
+        makeMergedEvent({ kind: 'gift', id: 'no-gift-data', gift: null, timestamp: Date.now() })
+      ];
+      var allRejectedNoThrow = true;
+      var details = [];
+      inputs.forEach(function (input) {
+        try {
+          var r = queue.enqueue(input);
+          details.push(JSON.stringify(input) + ' -> ' + r.status);
+          if (r.status !== 'rejected') allRejectedNoThrow = false;
+        } catch (err) {
+          allRejectedNoThrow = false;
+          details.push(JSON.stringify(input) + ' -> THREW ' + err.message);
+        }
+      });
+      return { pass: allRejectedNoThrow, details: details.join(' | ') };
+    }));
+
+    results.push(runCase('Queue 21. Input-event muteras inte', function () {
+      queue.clear();
+      var raw = makeMergedEvent({ kind: 'like', id: 'immutable-1', timestamp: 1000 });
+      var before = JSON.stringify(raw);
+      queue.enqueue(raw);
+      var after = JSON.stringify(raw);
+      return { pass: before === after, details: 'before=' + before + ' after=' + after };
+    }));
+
+    results.push(runCase('Queue 22. getItems returnerar djupa kopior', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'copy-1', timestamp: Date.now() }));
+      var snapshot = queue.getItems();
+      snapshot[0].priority = 99999;
+      snapshot[0].event.count = 12345;
+      var again = queue.getItems();
+      var ok = again[0].priority !== 99999 && again[0].event.count !== 12345;
+      return { pass: ok, details: JSON.stringify({ mutatedSnapshot: snapshot, freshRead: again }) };
+    }));
+
+    results.push(runCase('Queue 23. Subscriber-fel stoppar inte nasta subscriber', function () {
+      queue.clear();
+      var secondCalled = false;
+      var unsub1 = queue.subscribe(function () { throw new Error('boom'); });
+      var unsub2 = queue.subscribe(function () { secondCalled = true; });
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'sub-test', timestamp: Date.now() }));
+      unsub1();
+      unsub2();
+      return { pass: secondCalled === true, details: 'secondCalled=' + secondCalled };
+    }));
+
+    results.push(runCase('Queue 24. Sorteringen ar deterministisk', function () {
+      queue.clear();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'd1', timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'd2', gift: { id: 'dg', name: 'Rose', imageUrl: null }, coins: 10, timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'follow', id: 'd3', timestamp: Date.now() }));
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'd4', timestamp: Date.now() }));
+      var first = JSON.stringify(queue.getItems());
+      var second = JSON.stringify(queue.getItems());
+      var ids = queue.getItems().map(function (item) { return item.event.id; });
+      var ok = first === second && ids.join(',') === ['d2', 'd3', 'd1', 'd4'].join(',');
+      return { pass: ok, details: 'ids=' + ids.join(',') };
+    }));
+
+    results.push(runCase('Queue 25. dequeue fran tom ko returnerar null', function () {
+      queue.clear();
+      var d = queue.dequeueNext();
+      return { pass: d === null, details: 'd=' + JSON.stringify(d) };
+    }));
+
+    queue.clear(); // leave the shared singleton in a clean state for anything run after this
+  }
+
   function run() {
     var results = [];
     runNormalizerCases(results);
     runMergeCases(results);
+    runQueueCases(results);
     return results;
   }
 
