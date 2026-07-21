@@ -1,7 +1,7 @@
-// recognition-rules.js — Recognition Engine, pure configuration (Steg 4 + 5).
+// recognition-rules.js — Recognition Engine, pure configuration (Steg 4 + 5 + 6).
 // No logic, no DOM, no timers, no side effects beyond registering window.VyraRecognitionRules.
-// Consumed by recognition-merge.js and recognition-queue.js (and later Filter/Controller) —
-// never mutated at runtime; the whole tree is frozen below.
+// Consumed by recognition-merge.js, recognition-queue.js and recognition-controller.js (and
+// later Filter) — never mutated at runtime; the whole tree is frozen below.
 (function (root) {
   'use strict';
 
@@ -58,6 +58,20 @@
 
     queue: Object.freeze({
       maxLength: 30
+    }),
+
+    // recognition-controller.js's per-kind presentation duration in ms — how long a
+    // CurrentPresentation stays active before tick() auto-completes it. Gift tiers reuse the
+    // exact same priority.giftThresholds above (documented requirement: Controller classifies
+    // gifts identically to Queue), so no separate gift threshold set exists here.
+    presentationMs: Object.freeze({
+      join: 2500,
+      like: 3000,
+      share: 3500,
+      follow: 4000,
+      giftSmall: 4500,
+      giftMedium: 5500,
+      giftLarge: 7000
     })
   };
 

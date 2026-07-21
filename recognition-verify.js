@@ -35,6 +35,14 @@
     return ns;
   }
 
+  function getController() {
+    var ns = root.VyraRecognitionController;
+    if (!ns || typeof ns.tick !== 'function') {
+      throw new Error('window.VyraRecognitionController is not available — load recognition-types.js, recognition-rules.js, recognition-queue.js and recognition-controller.js first');
+    }
+    return ns;
+  }
+
   function makeResult(name, pass, details) {
     return { name: name, pass: !!pass, details: details || '' };
   }
@@ -749,11 +757,425 @@
     queue.clear(); // leave the shared singleton in a clean state for anything run after this
   }
 
+  // ---- Steg 6: Recognition Controller cases --------------------------------------------
+
+  function runControllerCases(results) {
+    var queue = getQueue();
+    var controller = getController();
+
+    function resetAll() {
+      queue.clear();
+      controller.stop();
+      controller.clear();
+    }
+
+    results.push(runCase('Controller 1. Initial state ar stopped', function () {
+      resetAll();
+      var state = controller.getState();
+      var ok = state.status === 'stopped' && state.running === false;
+      return { pass: ok, details: JSON.stringify(state) };
+    }));
+
+    results.push(runCase('Controller 2. start ger idle', function () {
+      resetAll();
+      controller.start();
+      var state = controller.getState();
+      var ok = state.status === 'idle' && state.running === true && state.current === null;
+      return { pass: ok, details: JSON.stringify(state) };
+    }));
+
+    results.push(runCase('Controller 3. Forsta tick hamtar ett event', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c3', timestamp: 1000 }));
+      controller.tick(1000);
+      var current = controller.getCurrent();
+      var ok = !!current && current.event.id === 'c3' && current.status === 'presenting';
+      return { pass: ok, details: JSON.stringify(current) };
+    }));
+
+    results.push(runCase('Controller 4. Endast ett event ar current', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c4a', timestamp: 1000 }));
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c4b', timestamp: 1000 }));
+      controller.tick(1000);
+      var current = controller.getCurrent();
+      var ok = !!current && current.event.id === 'c4a' && queue.size() === 1;
+      return { pass: ok, details: JSON.stringify({ current: current, queueSize: queue.size() }) };
+    }));
+
+    results.push(runCase('Controller 5. Ett andra event startar inte medan current ar aktivt', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c5a', timestamp: 1000 }));
+      controller.tick(2000); // starts c5a, endsAt = 2000 + 3000 = 5000
+      queue.enqueue(makeMergedEvent({ kind: 'gift', id: 'c5b', gift: { id: 'g5', name: 'Rose', imageUrl: null }, coins: 10, timestamp: 2000 }));
+      controller.tick(2100); // not yet expired
+      var current = controller.getCurrent();
+      var ok = !!current && current.event.id === 'c5a' && queue.size() === 1;
+      return { pass: ok, details: JSON.stringify({ current: current, queueSize: queue.size() }) };
+    }));
+
+    results.push(runCase('Controller 6. Event slutfors nar now nar endsAt', function () {
+      resetAll();
+      controller.start();
+      var completes = [];
+      var unsub = controller.subscribe(function (e) { if (e.type === 'presentation-complete') completes.push(e); });
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c6', timestamp: 1000 }));
+      controller.tick(1000); // endsAt = 1000 + 2500 = 3500
+      controller.tick(3500);
+      unsub();
+      var ok = controller.getCurrent() === null && completes.length === 1 && completes[0].presentation.event.id === 'c6';
+      return { pass: ok, details: JSON.stringify(completes) };
+    }));
+
+    results.push(runCase('Controller 7. Nasta event startar forst pa efterfoljande tick', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c7a', timestamp: 1000 }));
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c7b', timestamp: 1000 }));
+      controller.tick(1000); // starts c7a, endsAt=3500
+      controller.tick(3500); // completes c7a, does NOT start c7b this same call
+      var afterCompleteTick = controller.getCurrent();
+      controller.tick(3600); // separate tick -> now starts c7b
+      var afterNextTick = controller.getCurrent();
+      var ok = afterCompleteTick === null && !!afterNextTick && afterNextTick.event.id === 'c7b';
+      return { pass: ok, details: JSON.stringify({ afterCompleteTick: afterCompleteTick, afterNextTick: afterNextTick }) };
+    }));
+
+    results.push(runCase('Controller 8. completeCurrent avslutar direkt', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c8', timestamp: 1000 }));
+      controller.tick(1000);
+      var result = controller.completeCurrent('manual-done');
+      var ok = !!result && result.event.id === 'c8' && result.status === 'completed' && controller.getCurrent() === null;
+      return { pass: ok, details: JSON.stringify(result) };
+    }));
+
+    results.push(runCase('Controller 9. skipCurrent avslutar direkt', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c9', timestamp: 1000 }));
+      controller.tick(1000);
+      var result = controller.skipCurrent('user-skip');
+      var ok = !!result && result.event.id === 'c9' && result.status === 'skipped' && controller.getCurrent() === null;
+      return { pass: ok, details: JSON.stringify(result) };
+    }));
+
+    results.push(runCase('Controller 10. completeCurrent pa tom Controller ger null', function () {
+      resetAll();
+      controller.start();
+      var result = controller.completeCurrent();
+      return { pass: result === null, details: 'result=' + JSON.stringify(result) };
+    }));
+
+    results.push(runCase('Controller 11. skipCurrent pa tom Controller ger null', function () {
+      resetAll();
+      controller.start();
+      var result = controller.skipCurrent();
+      return { pass: result === null, details: 'result=' + JSON.stringify(result) };
+    }));
+
+    results.push(runCase('Controller 12. pause behaller current', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c12', timestamp: 1000 }));
+      controller.tick(1000);
+      controller.pause();
+      var current = controller.getCurrent();
+      var ok = !!current && current.event.id === 'c12' && controller.isPaused() === true;
+      controller.resume();
+      return { pass: ok, details: JSON.stringify(current) };
+    }));
+
+    results.push(runCase('Controller 13. tick under paus andrar inget', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c13', timestamp: 1000 }));
+      controller.tick(1000); // endsAt = 3500
+      controller.pause();
+      controller.tick(9999999); // far past endsAt, but paused -> tick() must no-op entirely
+      var current = controller.getCurrent();
+      var ok = !!current && current.event.id === 'c13';
+      controller.resume();
+      return { pass: ok, details: JSON.stringify(current) };
+    }));
+
+    results.push(runCase('Controller 14. resume forlanger endsAt med pausens langd', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c14', timestamp: Date.now() }));
+      controller.tick(Date.now());
+      var beforePause = controller.getCurrent().endsAt;
+      controller.pause();
+      var waitStart = Date.now();
+      while (Date.now() - waitStart < 20) { /* deterministic-enough busy wait for a real, measurable pause duration — pause()/resume() take no `now` override per the spec's own exposed signatures, so this is the only honest way to prove real elapsed time gets added back */ }
+      controller.resume();
+      var afterResume = controller.getCurrent().endsAt;
+      var delta = afterResume - beforePause;
+      var ok = afterResume > beforePause && delta >= 15 && delta < 2000;
+      return { pass: ok, details: JSON.stringify({ beforePause: beforePause, afterResume: afterResume, delta: delta }) };
+    }));
+
+    results.push(runCase('Controller 15. stop behaller current', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c15', timestamp: 1000 }));
+      controller.tick(1000);
+      controller.stop();
+      var current = controller.getCurrent();
+      var ok = !!current && current.event.id === 'c15' && controller.getState().status === 'stopped';
+      return { pass: ok, details: JSON.stringify(current) };
+    }));
+
+    results.push(runCase('Controller 16. tick under stop andrar inget', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c16', timestamp: 1000 }));
+      controller.tick(1000); // endsAt = 3500
+      controller.stop();
+      controller.tick(9999999);
+      var current = controller.getCurrent();
+      var ok = !!current && current.event.id === 'c16';
+      return { pass: ok, details: JSON.stringify(current) };
+    }));
+
+    results.push(runCase('Controller 17. start efter stop fungerar', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c17a', timestamp: 1000 }));
+      controller.tick(1000);
+      controller.completeCurrent(); // clear current before stopping, so restart starts from a clean idle
+      controller.stop();
+      controller.start();
+      var stateAfterRestart = controller.getState();
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c17b', timestamp: 2000 }));
+      controller.tick(2000);
+      var current = controller.getCurrent();
+      var ok = stateAfterRestart.status === 'idle' && stateAfterRestart.running === true
+        && !!current && current.event.id === 'c17b';
+      return { pass: ok, details: JSON.stringify({ stateAfterRestart: stateAfterRestart, current: current }) };
+    }));
+
+    results.push(runCase('Controller 18. clear tommer endast current, inte Queue', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c18a', timestamp: 1000 }));
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c18b', timestamp: 1000 }));
+      controller.tick(1000); // current = c18a, c18b still pending in queue
+      var queueSizeBefore = queue.size();
+      controller.clear();
+      var current = controller.getCurrent();
+      var queueSizeAfter = queue.size();
+      var ok = current === null && queueSizeBefore === 1 && queueSizeAfter === 1;
+      return { pass: ok, details: JSON.stringify({ queueSizeBefore: queueSizeBefore, queueSizeAfter: queueSizeAfter }) };
+    }));
+
+    // 19-25: presentation durations per kind, including the three gift tiers.
+    (function () {
+      var cases = [
+        [19, 'Join far ratt duration', 'join', null, 2500],
+        [20, 'Like far ratt duration', 'like', null, 3000],
+        [21, 'Follow far ratt duration', 'follow', null, 4000],
+        [22, 'Share far ratt duration', 'share', null, 3500],
+        [23, 'Small gift far ratt duration', 'gift', { gift: { id: 'gs', name: 'Rose', imageUrl: null }, coins: 5 }, 4500],
+        [24, 'Medium gift far ratt duration', 'gift', { gift: { id: 'gm', name: 'Galaxy', imageUrl: null }, coins: 500 }, 5500],
+        [25, 'Large gift far ratt duration', 'gift', { gift: { id: 'gl', name: 'Universe', imageUrl: null }, coins: 5000 }, 7000]
+      ];
+      cases.forEach(function (c) {
+        var caseNumber = c[0], label = c[1], kind = c[2], giftOverrides = c[3], expectedDuration = c[4];
+        results.push(runCase('Controller ' + caseNumber + '. ' + label, function () {
+          resetAll();
+          controller.start();
+          var overrides = Object.assign({ kind: kind, id: 'dur-' + kind + '-' + caseNumber, timestamp: 1000 }, giftOverrides || {});
+          queue.enqueue(makeMergedEvent(overrides));
+          controller.tick(1000);
+          var current = controller.getCurrent();
+          var ok = !!current && current.durationMs === expectedDuration && current.endsAt === 1000 + expectedDuration;
+          return { pass: ok, details: JSON.stringify(current) };
+        }));
+      });
+    })();
+
+    results.push(runCase('Controller 26. Samma Queue-event muteras inte', function () {
+      resetAll();
+      controller.start();
+      var original = makeMergedEvent({ kind: 'gift', id: 'c26', gift: { id: 'g26', name: 'Rose', imageUrl: null }, coins: 50, timestamp: 1000 });
+      var before = JSON.stringify(original);
+      queue.enqueue(original);
+      controller.tick(1000);
+      var after = JSON.stringify(original);
+      return { pass: before === after, details: 'before=' + before + ' after=' + after };
+    }));
+
+    results.push(runCase('Controller 27. getCurrent returnerar djup kopia', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c27', timestamp: 1000 }));
+      controller.tick(1000);
+      var snapshot = controller.getCurrent();
+      snapshot.durationMs = 999999;
+      snapshot.event.count = 42424242;
+      var again = controller.getCurrent();
+      var ok = again.durationMs !== 999999 && again.event.count !== 42424242;
+      return { pass: ok, details: JSON.stringify({ mutatedSnapshot: snapshot, freshRead: again }) };
+    }));
+
+    results.push(runCase('Controller 28. getState returnerar djup kopia', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c28', timestamp: 1000 }));
+      controller.tick(1000);
+      var snapshot = controller.getState();
+      snapshot.current.durationMs = 111;
+      snapshot.status = 'tampered';
+      var again = controller.getState();
+      var ok = again.current.durationMs !== 111 && again.status !== 'tampered';
+      return { pass: ok, details: JSON.stringify({ mutatedSnapshot: snapshot, freshRead: again }) };
+    }));
+
+    results.push(runCase('Controller 29. Subscriber far presentation-start', function () {
+      resetAll();
+      controller.start();
+      var events = [];
+      var unsub = controller.subscribe(function (e) { events.push(e); });
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c29', timestamp: 1000 }));
+      controller.tick(1000);
+      unsub();
+      var ok = events.some(function (e) { return e.type === 'presentation-start' && e.presentation.event.id === 'c29'; });
+      return { pass: ok, details: JSON.stringify(events) };
+    }));
+
+    results.push(runCase('Controller 30. Subscriber far presentation-complete', function () {
+      resetAll();
+      controller.start();
+      var events = [];
+      var unsub = controller.subscribe(function (e) { events.push(e); });
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c30', timestamp: 1000 }));
+      controller.tick(1000); // endsAt = 3500
+      controller.tick(3500);
+      unsub();
+      var ok = events.some(function (e) { return e.type === 'presentation-complete' && e.presentation.event.id === 'c30'; });
+      return { pass: ok, details: JSON.stringify(events) };
+    }));
+
+    results.push(runCase('Controller 31. Subscriber far presentation-skip', function () {
+      resetAll();
+      controller.start();
+      var events = [];
+      var unsub = controller.subscribe(function (e) { events.push(e); });
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c31', timestamp: 1000 }));
+      controller.tick(1000);
+      controller.skipCurrent('c31-reason');
+      unsub();
+      var ok = events.some(function (e) { return e.type === 'presentation-skip' && e.presentation.event.id === 'c31' && e.reason === 'c31-reason'; });
+      return { pass: ok, details: JSON.stringify(events) };
+    }));
+
+    results.push(runCase('Controller 32. Subscriber-fel stoppar inte nasta subscriber', function () {
+      resetAll();
+      controller.start();
+      var secondCalled = false;
+      var unsub1 = controller.subscribe(function () { throw new Error('boom'); });
+      var unsub2 = controller.subscribe(function () { secondCalled = true; });
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c32', timestamp: 1000 }));
+      controller.tick(1000);
+      unsub1();
+      unsub2();
+      return { pass: secondCalled === true, details: 'secondCalled=' + secondCalled };
+    }));
+
+    results.push(runCase('Controller 33. unsubscribe fungerar', function () {
+      resetAll();
+      var calls = 0;
+      var unsub = controller.subscribe(function () { calls++; });
+      controller.start(); // -> calls=1
+      unsub();
+      controller.stop(); // unsubscribed -> must NOT increment
+      var ok = calls === 1;
+      return { pass: ok, details: 'calls=' + calls };
+    }));
+
+    results.push(runCase('Controller 34. Stats raknas korrekt', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c34a', timestamp: 1000 }));
+      controller.tick(1000); // started=1, ticks=1 (starts c34a, endsAt=4000)
+      controller.tick(1000); // ticks=2, nothing else changes (not expired yet)
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'c34b', timestamp: 1000 }));
+      controller.tick(4000); // ticks=3, completes c34a (completed=1), does not start c34b this call
+      controller.tick(4000); // ticks=4, starts c34b (started=2)
+      controller.skipCurrent('c34-skip'); // skipped=1
+      var stats = controller.getStats();
+      var ok = stats.started === 2 && stats.completed === 1 && stats.skipped === 1 && stats.ticks === 4
+        && stats.errors === 0 && stats.running === true && stats.paused === false && stats.hasCurrent === false;
+      return { pass: ok, details: JSON.stringify(stats) };
+    }));
+
+    results.push(runCase('Controller 35. Ogiltigt/tomt Queue-event kraschar inte Controller', function () {
+      resetAll();
+      controller.start();
+      var threw = false;
+      try { controller.tick(Date.now()); } catch (err) { threw = true; }
+      var current = controller.getCurrent();
+      var ok = threw === false && current === null;
+      return { pass: ok, details: JSON.stringify({ threw: threw, current: current }) };
+    }));
+
+    results.push(runCase('Controller 36. tick ar deterministisk med explicit now', function () {
+      resetAll();
+      controller.start();
+      queue.enqueue(makeMergedEvent({ kind: 'like', id: 'c36', timestamp: 5000 }));
+      controller.tick(5000);
+      var current1 = controller.getCurrent();
+      controller.tick(5000); // same explicit now again — current already active, not expired -> unchanged
+      var current2 = controller.getCurrent();
+      var ok = current1.startedAt === 5000 && current1.endsAt === 8000 && JSON.stringify(current1) === JSON.stringify(current2);
+      return { pass: ok, details: JSON.stringify({ current1: current1, current2: current2 }) };
+    }));
+
+    results.push(runCase('Controller 37. Controller anvander inga timers', function () {
+      resetAll();
+      var originalSetTimeout = root.setTimeout;
+      var originalSetInterval = root.setInterval;
+      var originalRAF = root.requestAnimationFrame;
+      var calls = { setTimeout: 0, setInterval: 0, requestAnimationFrame: 0 };
+      if (typeof originalSetTimeout === 'function') root.setTimeout = function () { calls.setTimeout++; return originalSetTimeout.apply(this, arguments); };
+      if (typeof originalSetInterval === 'function') root.setInterval = function () { calls.setInterval++; return originalSetInterval.apply(this, arguments); };
+      if (typeof originalRAF === 'function') root.requestAnimationFrame = function () { calls.requestAnimationFrame++; return originalRAF.apply(this, arguments); };
+
+      try {
+        controller.start();
+        queue.enqueue(makeMergedEvent({ kind: 'like', id: 'timer-check', timestamp: Date.now() }));
+        controller.tick(Date.now());
+        controller.pause();
+        controller.tick(Date.now());
+        controller.resume();
+        controller.completeCurrent();
+        controller.skipCurrent();
+        controller.stop();
+        controller.clear();
+      } finally {
+        if (typeof originalSetTimeout === 'function') root.setTimeout = originalSetTimeout;
+        if (typeof originalSetInterval === 'function') root.setInterval = originalSetInterval;
+        if (typeof originalRAF === 'function') root.requestAnimationFrame = originalRAF;
+      }
+
+      var ok = calls.setTimeout === 0 && calls.setInterval === 0 && calls.requestAnimationFrame === 0;
+      return { pass: ok, details: JSON.stringify(calls) };
+    }));
+
+    resetAll(); // leave both shared singletons in a clean state for anything run after this
+  }
+
   function run() {
     var results = [];
     runNormalizerCases(results);
     runMergeCases(results);
     runQueueCases(results);
+    runControllerCases(results);
     return results;
   }
 

@@ -114,3 +114,31 @@
  * @property {number} expiresAt
  * @property {number} sequence
  */
+
+/**
+ * @typedef {'idle'|'presenting'|'paused'|'stopped'} ControllerStatus
+ */
+
+/**
+ * The single active recognition moment held by recognition-controller.js (Steg 6). `status`
+ * is `'presenting'` while active; completeCurrent()/skipCurrent() and tick()'s own
+ * auto-completion hand out a copy with `status` set to `'completed'`/`'skipped'` instead —
+ * the field always reflects what actually happened to that particular presentation.
+ * @typedef {Object} CurrentPresentation
+ * @property {string} id
+ * @property {MergedEvent} event
+ * @property {number} startedAt
+ * @property {number} durationMs
+ * @property {number} endsAt
+ * @property {'presenting'|'completed'|'skipped'} status
+ */
+
+/**
+ * Payload handed to recognition-controller.js subscribers.
+ * @typedef {Object} ControllerNotification
+ * @property {'start'|'stop'|'pause'|'resume'|'presentation-start'|'presentation-complete'|'presentation-skip'|'clear'} type
+ * @property {number} timestamp
+ * @property {CurrentPresentation} [presentation]
+ * @property {string} [reason]
+ * @property {*} [result]
+ */
