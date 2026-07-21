@@ -8,9 +8,11 @@ Last updated: 2026-07-22 (Phase 0 audit + Phase 1 confirmation).
 
 ## Latest verified commit
 
-`540eaac4788e04c286d716b3bc914ac5982edcf8` —
+Phase 2 (Runtime Hardening) commit — see git log for exact SHA after push;
+prior verified commit was `540eaac4788e04c286d716b3bc914ac5982edcf8` —
 `feat(recognition): add standalone recognition runtime`
-(pushed; local HEAD confirmed equal to `origin/feature/vyra-vfx-engine`)
+(pushed; local HEAD confirmed equal to `origin/feature/vyra-vfx-engine`).
+Phase 0 docs landed at `21cffb8` (`docs: add VYRA project roadmap and implementation state`).
 
 Working tree at audit time: clean except pre-existing unrelated untracked items
 (`.claude/agents/`, `.claude/data/`, `assets/gifts/`, `assets/images/test/` — not created by
@@ -44,11 +46,13 @@ this roadmap, left untouched).
 ## Partially completed / not yet started (per this roadmap)
 
 - **Phase 0 — Repository audit**: done this pass (see Baseline findings below).
-- **Phase 2 — Runtime hardening**: not started. Recognition Runtime is already reasonably
-  hardened by construction (deterministic, no hidden timers, error-contained subscriber
-  dispatch) but the roadmap's specific stress scenarios (500 mixed events, repeated
-  start/stop and mount/clear cycles, `?recognitiondebug=1` diagnostics mode,
-  `docs/recognition-runtime-report.md`) have not been run/written yet.
+- **Phase 2 — Runtime hardening**: done. Full checklist reviewed (see
+  `docs/recognition-runtime-report.md`); 4 new stress/lifecycle test cases added
+  (`Hardening 1-4`: 500 mixed events, repeated start/stop cycles, repeated mount/clear
+  cycles, duplicate-subscription check) — 246/246 passing in Node and browser, zero console
+  errors. No Runtime defects found; `?recognitiondebug=1` diagnostics mode already existed
+  from earlier steps and was confirmed inert-by-default and correctly wired into every
+  caught-error path.
 - **Phase 3 — Generic adapter contract**: not started. No `recognition-adapter.js` exists.
 - **Phase 4 — TikTok LIVE adapter**: not started as a Recognition-Runtime-facing adapter.
   The **transport** already exists and works (`tiktok-bridge/bridge.js` →
@@ -60,7 +64,8 @@ this roadmap, left untouched).
 
 ## Failing tests
 
-None. `recognition-verify.js` reports 242/242 in both Node and browser as of this audit.
+None. `recognition-verify.js` reports 246/246 in both Node and browser as of the Phase 2
+hardening pass (up from 242/242 at Phase 1, +4 new hardening cases).
 No other automated test suite exists in the repository (confirmed — no `package.json` test
 script at root, no Jest/Mocha/Vitest config anywhere).
 
@@ -95,8 +100,10 @@ user before Phase 14 begins — not before.
 
 ## Exact next action
 
-Begin **Phase 2 — Runtime Hardening**: run the roadmap's specific stress scenarios against
-`recognition-runtime.js` (500 mixed events, repeated start/stop cycles, repeated mount/clear
-cycles, memory/subscription cleanup checks), add the `?recognitiondebug=1` dev-only
-diagnostics mode, write `docs/recognition-runtime-report.md`, and commit as
-`fix(recognition): harden runtime lifecycle and failure handling`.
+Begin **Phase 3 — Generic Live Event Adapter Contract**: create `recognition-adapter.js`,
+`recognition-adapter-types.js`, and `recognition-adapter-demo.html` defining a
+provider-agnostic connect/disconnect/event-envelope contract (`window.VyraRecognitionAdapter
+= {create, registerProvider, getProviders}`), with zero TikTok-specific logic. Add adapter
+lifecycle tests (connection lifecycle, duplicate connect/disconnect, malformed provider
+events, subscriber error isolation, reconnect state) to `recognition-verify.js`, run tests,
+and commit as `feat(recognition): add generic live event adapter contract`.

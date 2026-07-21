@@ -2702,6 +2702,103 @@
       return { pass: ok, details: JSON.stringify(calls) };
     }));
 
+    // ---- Phase H2: hardening stress cases (Steg 9 Phase 2 of the roadmap) -----------------
+    // Runs before the permanent destroy-lifecycle block (Phase I) since these cases still
+    // need a live, working Runtime instance.
+
+    results.push(runCase('Hardening 1. 500 blandade events kraschar inte och kon vaxer inte obegransat', function () {
+      if (!hasDom()) return skip();
+      resetForTest();
+      // Runtime stats are cumulative for the life of the singleton (clear() only increments
+      // stats.cleared, per Runtime 32/clear()'s own documented contract) — every earlier
+      // Runtime test section has already added to pushed/errors/etc. by the time this case
+      // runs, so this asserts on the DELTA this test itself produces, not absolute values.
+      var before = runtime.getStats();
+      var kinds = ['join', 'like', 'follow', 'share', 'gift'];
+      var threw = false;
+      var hNow = simNow;
+      try {
+        for (var i = 0; i < 500; i++) {
+          var kind = kinds[i % kinds.length];
+          var overrides = { actor: { id: 'hard-actor-' + i }, timestamp: hNow };
+          if (kind === 'like') overrides.count = 1 + (i % 20);
+          if (kind === 'gift') { overrides.gift = { id: 'hg' + i, name: 'Gift ' + i, imageUrl: null }; overrides.coins = (i * 13) % 6000; }
+          runtime.push(makeMergedEvent(Object.assign({ kind: kind }, overrides)), hNow);
+          if (i % 25 === 0) {
+            hNow += 2000; // periodically advance past the merge window and drain presentations
+            runtime.tick(hNow);
+            runtime.flush(hNow);
+          }
+        }
+        hNow += 5000;
+        runtime.tick(hNow);
+      } catch (err) {
+        threw = true;
+      }
+      var after = runtime.getStats();
+      var qSize = queue.size();
+      var errorsDelta = after.errors - before.errors;
+      var pushedDelta = after.pushed - before.pushed;
+      var ok = threw === false && qSize <= 30 && errorsDelta === 0 && pushedDelta === 500;
+      return { pass: ok, details: JSON.stringify({ threw: threw, queueSize: qSize, errorsDelta: errorsDelta, pushedDelta: pushedDelta, before: before, after: after }) };
+    }));
+
+    results.push(runCase('Hardening 2. Upprepade start/stop-cykler lamnar inte Runtime i trasigt tillstand', function () {
+      if (!hasDom()) return skip();
+      resetForTest();
+      var threw = false;
+      try {
+        for (var i = 0; i < 25; i++) {
+          runtime.start();
+          runtime.stop();
+        }
+        runtime.start();
+      } catch (err) {
+        threw = true;
+      }
+      var hNow = simNow + 100000;
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'h2', actor: { id: 'h2-actor' }, timestamp: hNow }), hNow);
+      runtime.tick(hNow);
+      var current = controller.getState().current;
+      var ok = threw === false && runtime.getState().running === true && !!current && current.event.actor.id === 'h2-actor';
+      return { pass: ok, details: JSON.stringify({ threw: threw, current: current, state: runtime.getState() }) };
+    }));
+
+    results.push(runCase('Hardening 3. Upprepade mount/clear-cykler skapar inte flera Card-rotelement', function () {
+      if (!hasDom()) return skip();
+      var threw = false;
+      try {
+        for (var i = 0; i < 20; i++) {
+          runtime.mount(stageContainer);
+          runtime.clear();
+        }
+      } catch (err) {
+        threw = true;
+      }
+      var rootCount = stageContainer.querySelectorAll('.vyra-recognition-root').length;
+      var ok = threw === false && rootCount === 1;
+      return { pass: ok, details: 'threw=' + threw + ' rootCount=' + rootCount };
+    }));
+
+    results.push(runCase('Hardening 4. Upprepad push/tick skapar inte dubbla interna subscriptions', function () {
+      if (!hasDom()) return skip();
+      resetForTest();
+      var notifyCount = 0;
+      var unsubscribe = runtime.subscribe(function () { notifyCount++; });
+      var hNow = simNow;
+      // A single immediate-kind push legitimately fires exactly 2 notifications ('push' then
+      // 'enqueue') per Runtime 43's own established baseline — if ensureWired() ever wired a
+      // second internal Merge/Controller subscription (e.g. by being called again on every
+      // push() instead of only once), this count would silently double.
+      for (var i = 0; i < 10; i++) {
+        hNow += 1;
+        runtime.push(makeMergedEvent({ kind: 'follow', id: 'h4-' + i, actor: { id: 'h4-actor-' + i }, timestamp: hNow }), hNow);
+      }
+      unsubscribe();
+      var ok = notifyCount === 20; // 10 pushes * 2 notifications each
+      return { pass: ok, details: 'notifyCount=' + notifyCount };
+    }));
+
     // ---- Phase I: destroy lifecycle — MUST run last, destroy() is permanent ---------------
 
     results.push(runCase('Runtime 33. destroy tar bort Card DOM', function () {
