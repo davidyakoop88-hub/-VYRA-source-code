@@ -402,6 +402,64 @@
       return { pass: ok, details: JSON.stringify({ mutatedSnapshot: snapshot, freshRead: again }) };
     }));
 
+    // ---- pending stat accuracy (fix: getStats().pending must always equal the actual number
+    // of entries in pendingByMergeKey, never a separately-drifting counter) --------------------
+
+    results.push(runCase('PendingStats 1. Nytt like-event ger pending = 1', function () {
+      merge.clear();
+      merge.push(makeEvent({ kind: 'like', timestamp: 1000, id: 'ps1-e1' }));
+      var ok = merge.getStats().pending === 1 && merge.getPending().length === 1;
+      return { pass: ok, details: JSON.stringify(merge.getStats()) };
+    }));
+
+    results.push(runCase('PendingStats 2. Merge av samma eventgrupp behaller pending = 1', function () {
+      merge.clear();
+      merge.push(makeEvent({ kind: 'like', timestamp: 1000, id: 'ps2-e1' }));
+      merge.push(makeEvent({ kind: 'like', timestamp: 1200, id: 'ps2-e2' }));
+      merge.push(makeEvent({ kind: 'like', timestamp: 1300, id: 'ps2-e3' }));
+      var ok = merge.getStats().pending === 1 && merge.getPending().length === 1;
+      return { pass: ok, details: JSON.stringify(merge.getStats()) };
+    }));
+
+    results.push(runCase('PendingStats 3. flushExpired() andrar pending till 0', function () {
+      merge.clear();
+      merge.push(makeEvent({ kind: 'like', timestamp: 1000, id: 'ps3-e1' }));
+      var beforeFlush = merge.getStats().pending;
+      merge.flushExpired(1000 + 1500);
+      var afterFlush = merge.getStats().pending;
+      var ok = beforeFlush === 1 && afterFlush === 0 && merge.getPending().length === 0;
+      return { pass: ok, details: JSON.stringify({ beforeFlush: beforeFlush, afterFlush: afterFlush }) };
+    }));
+
+    results.push(runCase('PendingStats 4. Tva olika pending mergeKeys ger pending = 2', function () {
+      merge.clear();
+      merge.push(makeEvent({ kind: 'like', actor: { id: 'ps4-A' }, timestamp: 1000, id: 'ps4-e1' }));
+      merge.push(makeEvent({ kind: 'gift', actor: { id: 'ps4-A' }, gift: { id: 'g1', name: 'Rose', imageUrl: null }, timestamp: 1000, id: 'ps4-e2' }));
+      var ok = merge.getStats().pending === 2 && merge.getPending().length === 2;
+      return { pass: ok, details: JSON.stringify(merge.getStats()) };
+    }));
+
+    results.push(runCase('PendingStats 5. Utganget aggregat ersatt av nytt for samma mergeKey forblir pending = 1', function () {
+      merge.clear();
+      merge.push(makeEvent({ kind: 'like', timestamp: 1000, id: 'ps5-e1' }));
+      var afterFirst = merge.getStats().pending;
+      merge.push(makeEvent({ kind: 'like', timestamp: 1000 + 1500 + 1, id: 'ps5-e2' })); // window elapsed -> old emitted, new created
+      var afterReplace = merge.getStats().pending;
+      var ok = afterFirst === 1 && afterReplace === 1 && merge.getPending().length === 1;
+      return { pass: ok, details: JSON.stringify({ afterFirst: afterFirst, afterReplace: afterReplace, pending: merge.getPending() }) };
+    }));
+
+    results.push(runCase('PendingStats 6. clear() ger pending = 0', function () {
+      merge.clear();
+      merge.push(makeEvent({ kind: 'like', actor: { id: 'ps6-A' }, timestamp: 1000, id: 'ps6-e1' }));
+      merge.push(makeEvent({ kind: 'gift', actor: { id: 'ps6-B' }, gift: { id: 'g1', name: 'Rose', imageUrl: null }, timestamp: 1000, id: 'ps6-e2' }));
+      var beforeClear = merge.getStats().pending;
+      merge.clear();
+      var afterClear = merge.getStats().pending;
+      var ok = beforeClear === 2 && afterClear === 0 && merge.getPending().length === 0;
+      return { pass: ok, details: JSON.stringify({ beforeClear: beforeClear, afterClear: afterClear }) };
+    }));
+
     merge.clear(); // leave the shared singleton in a clean state for anything run after this
   }
 

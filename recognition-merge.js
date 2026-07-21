@@ -26,9 +26,14 @@
   var subscribers = [];                // fn(MergedEvent) listeners
   var localIdCounter = 0;
 
+  // "pending" is deliberately NOT tracked here as an incremented/decremented counter — it has
+  // to shrink on every path that removes an entry from pendingByMergeKey (flushExpired(), the
+  // "expired aggregate replaced by a fresh one" branch in handleMergeable(), and any future
+  // removal path), and a separate counter drifts the moment one of those paths forgets to
+  // decrement it. getStats() instead reads pendingByMergeKey.size directly (see below), which
+  // can never be out of sync with the actual map.
   var stats = {
     received: 0,
-    pending: 0,
     merged: 0,
     emitted: 0,
     duplicates: 0,
@@ -109,7 +114,6 @@
     dedupeLastSeenByMergeKey.clear();
     seenEventIds.clear();
     stats.received = 0;
-    stats.pending = 0;
     stats.merged = 0;
     stats.emitted = 0;
     stats.duplicates = 0;
@@ -125,7 +129,7 @@
   function getStats() {
     return {
       received: stats.received,
-      pending: stats.pending,
+      pending: pendingByMergeKey.size,
       merged: stats.merged,
       emitted: stats.emitted,
       duplicates: stats.duplicates,
@@ -179,7 +183,6 @@
     if (!pending) {
       var created = createSingleEventAggregate(event, kind);
       pendingByMergeKey.set(event.mergeKey, created);
-      stats.pending += 1;
       return { status: 'pending', event: deepClone(created) };
     }
 
@@ -196,7 +199,6 @@
     pendingByMergeKey.delete(event.mergeKey);
     var fresh = createSingleEventAggregate(event, kind);
     pendingByMergeKey.set(event.mergeKey, fresh);
-    stats.pending += 1;
     return { status: 'pending', event: deepClone(fresh) };
   }
 
