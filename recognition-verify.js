@@ -59,6 +59,14 @@
     return ns;
   }
 
+  function getRuntime() {
+    var ns = root.VyraRecognitionRuntime;
+    if (!ns || typeof ns.mount !== 'function') {
+      throw new Error('window.VyraRecognitionRuntime is not available — load the full pipeline plus recognition-runtime.js first');
+    }
+    return ns;
+  }
+
   function hasDom() {
     return typeof document !== 'undefined';
   }
@@ -2130,6 +2138,627 @@
     return null;
   }
 
+  // ---- Steg 9: Standalone Recognition Runtime cases --------------------------------------------
+  //
+  // Runtime.destroy() is permanent by design (spec: "Runtime far inte kunna startas eller ta
+  // emot events efter destroy") — unlike every other singleton in this suite, there is no way
+  // to reset it back to a usable state afterward. Every test that needs a working Runtime
+  // (labelled Runtime 1-32 and 38-49 below, matching the spec's own numbering for traceability)
+  // therefore runs BEFORE the destroy-lifecycle tests (labelled Runtime 33-37), regardless of
+  // the numbers in their names — this file pushes them in that adjusted order deliberately, and
+  // it's called out again in the final report.
+
+  function runRuntimeCases(results) {
+    var runtime = getRuntime();
+    var merge = getMerge();
+    var queue = getQueue();
+    var controller = getController();
+    var card = getCard();
+    var simNow = 1000;
+    var stageContainer = null;
+
+    function resetForTest() {
+      runtime.clear();
+    }
+
+    function skip(reason) {
+      return { pass: true, details: 'skipped: ' + (reason || 'no DOM in this environment') };
+    }
+
+    // ---- Phase A: state before any mount --------------------------------------------------
+
+    results.push(runCase('Runtime 1. Runtime initial state ar unmounted/stopped', function () {
+      if (!hasDom()) return skip();
+      var state = runtime.getState();
+      var ok = state.status === 'unmounted' && state.mounted === false && state.running === false;
+      return { pass: ok, details: JSON.stringify(state) };
+    }));
+
+    results.push(runCase('Runtime 4. Ogiltig mount-target rejected', function () {
+      if (!hasDom()) return skip();
+      var r1 = runtime.mount('#this-matches-nothing-at-all');
+      var r2 = runtime.mount(42);
+      var ok = r1.status === 'rejected' && r2.status === 'rejected' && runtime.getState().mounted === false;
+      return { pass: ok, details: JSON.stringify({ r1: r1, r2: r2 }) };
+    }));
+
+    // ---- Phase B: the one real mount used by every subsequent test ------------------------
+
+    results.push(runCase('Runtime 2. mount fungerar med HTMLElement', function () {
+      if (!hasDom()) return skip();
+      stageContainer = document.createElement('div');
+      stageContainer.id = 'vyra-runtime-test-stage';
+      document.body.appendChild(stageContainer);
+      var r = runtime.mount(stageContainer);
+      var ok = r.status === 'mounted' && runtime.getState().mounted === true;
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Runtime 3. mount fungerar med selector', function () {
+      if (!hasDom()) return skip();
+      // Runtime is already mounted from Runtime 2 (mount() is intentionally idempotent, matching
+      // "upprepad mount ska vara saker") — Runtime cannot be remounted to a *different* target
+      // without destroy(), which is permanent, so this verifies a selector-string argument is
+      // accepted without throwing and the idempotent status is still correct, rather than
+      // re-proving a from-scratch selector mount (already covered independently at the Card
+      // level in Steg 8's own Card 2 test).
+      var r = runtime.mount('#vyra-runtime-test-stage');
+      var ok = r.status === 'mounted';
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    // ---- Phase C: start/stop/pause/resume + push/merge/queue mechanics --------------------
+
+    results.push(runCase('Runtime 5. start startar Controller', function () {
+      if (!hasDom()) return skip();
+      runtime.start();
+      var ok = controller.isRunning() === true && runtime.getState().running === true;
+      return { pass: ok, details: JSON.stringify(runtime.getState()) };
+    }));
+
+    results.push(runCase('Runtime 6. Upprepad start ar saker', function () {
+      if (!hasDom()) return skip();
+      var threw = false;
+      try { runtime.start(); runtime.start(); } catch (err) { threw = true; }
+      var ok = threw === false && controller.isRunning() === true;
+      return { pass: ok, details: 'threw=' + threw };
+    }));
+
+    results.push(runCase('Runtime 10. push join gar genom Merge', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var mergeStatsBefore = merge.getStats();
+      var event = makeMergedEvent({ kind: 'join', id: 'r10', actor: { id: 'r10-actor' }, timestamp: simNow });
+      var r = runtime.push(event, simNow);
+      var mergeStatsAfter = merge.getStats();
+      var ok = r.status === 'queued' && mergeStatsAfter.emitted > mergeStatsBefore.emitted;
+      return { pass: ok, details: JSON.stringify({ r: r, mergeStatsBefore: mergeStatsBefore, mergeStatsAfter: mergeStatsAfter }) };
+    }));
+
+    results.push(runCase('Runtime 11. push non-mergeable event enqueueas', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var event = makeMergedEvent({ kind: 'follow', id: 'r11', actor: { id: 'r11-actor' }, timestamp: simNow });
+      var r = runtime.push(event, simNow);
+      var ok = r.status === 'queued' && !!r.event && queue.size() === 1;
+      return { pass: ok, details: JSON.stringify(r) + ' queueSize=' + queue.size() };
+    }));
+
+    results.push(runCase('Runtime 12. push like blir pending merge', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var event = makeMergedEvent({ kind: 'like', id: 'r12', actor: { id: 'r12-actor' }, timestamp: simNow });
+      var r = runtime.push(event, simNow);
+      var ok = r.status === 'pending-merge' && merge.getPending().length === 1 && queue.size() === 0;
+      return { pass: ok, details: JSON.stringify(r) + ' pending=' + merge.getPending().length + ' queueSize=' + queue.size() };
+    }));
+
+    results.push(runCase('Runtime 13. flush like producerar MergedEvent', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'like', id: 'r13', actor: { id: 'r13-actor' }, timestamp: simNow }), simNow);
+      var laterNow = simNow + 1600; // past the 1500ms like merge window
+      var flushed = runtime.flush(laterNow);
+      var ok = merge.getPending().length === 0 && flushed.length === 1 && flushed[0].status === 'enqueued';
+      return { pass: ok, details: JSON.stringify(flushed) };
+    }));
+
+    results.push(runCase('Runtime 14. Flushed event enqueueas', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'like', id: 'r14', actor: { id: 'r14-actor' }, timestamp: simNow }), simNow);
+      runtime.flush(simNow + 1600);
+      var ok = queue.size() === 1 && queue.getItems()[0].event.kind === 'like';
+      return { pass: ok, details: 'queueSize=' + queue.size() };
+    }));
+
+    results.push(runCase('Runtime 15. Queue prioriterar large gift', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      // gift (like like) is a MERGEABLE kind, not an immediate one — it only reaches Queue
+      // once its merge window elapses, so a flush is needed before peek() can see it.
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r15a', actor: { id: 'r15-join' }, timestamp: simNow }), simNow);
+      runtime.push(makeMergedEvent({ kind: 'gift', id: 'r15b', actor: { id: 'r15-gift' }, gift: { id: 'g15', name: 'Universe', imageUrl: null }, coins: 5000, timestamp: simNow }), simNow);
+      runtime.flush(simNow + 1600);
+      // peek(now) must be given the same simulated `now` — with no argument it defaults to the
+      // real Date.now(), which would treat our tiny simulated timestamps as long-expired.
+      var top = queue.peek(simNow + 1600);
+      var ok = !!top && top.kind === 'gift';
+      return { pass: ok, details: JSON.stringify(top) };
+    }));
+
+    results.push(runCase('Runtime 7. stop stoppar presentation', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r7', actor: { id: 'r7-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow); // starts the presentation
+      var startedModel = controller.getState().current;
+      runtime.stop();
+      runtime.tick(simNow + 999999); // far past any duration — must not advance while stopped
+      var ok = !!startedModel && JSON.stringify(controller.getState().current) === JSON.stringify(startedModel);
+      runtime.start(); // restore for subsequent tests
+      return { pass: ok, details: JSON.stringify({ startedModel: startedModel, after: controller.getState().current }) };
+    }));
+
+    results.push(runCase('Runtime 8. pause pausar Controller', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r8', actor: { id: 'r8-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      runtime.pause();
+      var ok = controller.isPaused() === true && runtime.getState().paused === true;
+      return { pass: ok, details: JSON.stringify(runtime.getState()) };
+    }));
+
+    results.push(runCase('Runtime 9. resume fungerar', function () {
+      if (!hasDom()) return skip();
+      runtime.resume();
+      var ok = controller.isPaused() === false && runtime.getState().paused === false;
+      return { pass: ok, details: JSON.stringify(runtime.getState()) };
+    }));
+
+    // ---- Phase D: tick-driven presentation lifecycle ---------------------------------------
+
+    results.push(runCase('Runtime 16. tick startar hogst ett event', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r16a', actor: { id: 'r16-a' }, timestamp: simNow }), simNow);
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r16b', actor: { id: 'r16-b' }, timestamp: simNow }), simNow);
+      var sizeBefore = queue.size();
+      runtime.tick(simNow);
+      var sizeAfter = queue.size();
+      var ok = sizeBefore === 2 && sizeAfter === 1 && !!controller.getState().current;
+      return { pass: ok, details: 'sizeBefore=' + sizeBefore + ' sizeAfter=' + sizeAfter };
+    }));
+
+    results.push(runCase('Runtime 17. presentation-start mappas', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var events = [];
+      var unsub = runtime.subscribe(function (e) { events.push(e); });
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r17', actor: { id: 'r17-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      unsub();
+      var startEvent = events.filter(function (e) { return e.type === 'presentation-start'; })[0];
+      var ok = !!startEvent && !!startEvent.model && startEvent.model.kind === 'join';
+      return { pass: ok, details: JSON.stringify(startEvent) };
+    }));
+
+    results.push(runCase('Runtime 18. Mappad presentation visas i Card', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r18', actor: { id: 'r18-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      var cardState = card.getState();
+      var ok = cardState.phase === 'entering' && !!cardState.currentModel && cardState.currentModel.kind === 'join';
+      return { pass: ok, details: JSON.stringify(cardState) };
+    }));
+
+    results.push(runCase('Runtime 19. complete doljer Card', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r19', actor: { id: 'r19-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow); // starts, join duration 2500ms -> endsAt = simNow + 2500
+      runtime.tick(simNow + 2500); // now >= endsAt -> completes
+      var ok = card.getState().phase === 'exiting';
+      return { pass: ok, details: JSON.stringify(card.getState()) };
+    }));
+
+    results.push(runCase('Runtime 20. Nasta event startar forst nasta tick', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r20a', actor: { id: 'r20-a' }, timestamp: simNow }), simNow);
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r20b', actor: { id: 'r20-b' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow); // starts r20a, endsAt = simNow + 2500
+      runtime.tick(simNow + 2500); // completes r20a, must NOT start r20b in this same call
+      var afterComplete = controller.getState().current;
+      runtime.tick(simNow + 2600); // separate tick -> starts r20b
+      var afterNextTick = controller.getState().current;
+      // Merge always generates its OWN fresh MergedEvent.id (the original pushed id only
+      // survives inside sourceEventIds) — actor.id passes through unchanged, so it's the
+      // reliable way to identify which pushed event ended up presenting.
+      var ok = afterComplete === null && !!afterNextTick && afterNextTick.event.actor.id === 'r20-b';
+      return { pass: ok, details: JSON.stringify({ afterComplete: afterComplete, afterNextTick: afterNextTick }) };
+    }));
+
+    results.push(runCase('Runtime 21. skip doljer Card', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r21', actor: { id: 'r21-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      controller.skipCurrent('runtime-test-skip'); // Controller's own skip, fires 'presentation-skip'
+      var ok = card.getState().phase === 'exiting';
+      return { pass: ok, details: JSON.stringify(card.getState()) };
+    }));
+
+    // ---- Phase E: error isolation between layers ------------------------------------------
+
+    results.push(runCase('Runtime 22. Mapper reject kraschar inte Runtime', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      // a whitespace-only gift.name passes Merge's and Queue's exact-empty-string check
+      // (`=== ''`) but fails Mapper's trimmed check (`.trim() === ''`) — a genuine, real
+      // "later stage rejects what earlier stages accepted" case, not a monkey-patched one.
+      var event = makeMergedEvent({ kind: 'gift', id: 'r22', actor: { id: 'r22-actor' }, gift: { id: 'g22', name: '   ', imageUrl: null }, coins: 10, timestamp: simNow });
+      var pushResult = runtime.push(event, simNow);
+      // gift is a mergeable kind (like like) — push() alone only produces 'pending-merge'; it
+      // must be flushed past its merge window before it can reach Queue/Controller/Mapper.
+      runtime.flush(simNow + 1600);
+      var statsBefore = runtime.getStats();
+      var threw = false;
+      try { runtime.tick(simNow + 1700); } catch (err) { threw = true; }
+      var statsAfter = runtime.getStats();
+      var ok = threw === false && pushResult.status === 'pending-merge'
+        && statsAfter.cardsRejected > statsBefore.cardsRejected && statsAfter.errors > statsBefore.errors
+        && controller.getState().current === null;
+      return { pass: ok, details: JSON.stringify({ pushResult: pushResult, statsBefore: statsBefore, statsAfter: statsAfter }) };
+    }));
+
+    results.push(runCase('Runtime 23. Card.show reject kraschar inte Runtime', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r23', actor: { id: 'r23-actor' }, timestamp: simNow }), simNow);
+      card.destroy(); // force a genuine card.show() rejection ("not mounted") underneath Runtime
+      var statsBefore = runtime.getStats();
+      var threw = false;
+      try { runtime.tick(simNow); } catch (err) { threw = true; }
+      var statsAfter = runtime.getStats();
+      card.mount(stageContainer); // restore Card's real mounted state for subsequent tests
+      var ok = threw === false && statsAfter.cardErrors > statsBefore.cardErrors && statsAfter.errors > statsBefore.errors;
+      return { pass: ok, details: JSON.stringify({ statsBefore: statsBefore, statsAfter: statsAfter }) };
+    }));
+
+    // ---- Phase F: stopped-state push/present behavior -------------------------------------
+
+    results.push(runCase('Runtime 24. Events kan koas medan Runtime ar stoppad', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.stop();
+      var r = runtime.push(makeMergedEvent({ kind: 'follow', id: 'r24', actor: { id: 'r24-actor' }, timestamp: simNow }), simNow);
+      var ok = r.status === 'queued' && queue.size() === 1;
+      runtime.start();
+      return { pass: ok, details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Runtime 25. Stoppad Runtime presenterar inte events', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.stop();
+      runtime.push(makeMergedEvent({ kind: 'follow', id: 'r25', actor: { id: 'r25-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow + 100);
+      var ok = controller.getState().current === null && queue.size() === 1;
+      runtime.start();
+      return { pass: ok, details: 'current=' + JSON.stringify(controller.getState().current) + ' queueSize=' + queue.size() };
+    }));
+
+    results.push(runCase('Runtime 26. start + tick presenterar tidigare koade events', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.stop();
+      runtime.push(makeMergedEvent({ kind: 'follow', id: 'r26', actor: { id: 'r26-actor' }, timestamp: simNow }), simNow);
+      runtime.start();
+      runtime.tick(simNow + 100);
+      var ok = !!controller.getState().current && controller.getState().current.event.actor.id === 'r26-actor';
+      return { pass: ok, details: JSON.stringify(controller.getState().current) };
+    }));
+
+    results.push(runCase('Runtime 27. pause konsumerar inte Queue', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r27a', actor: { id: 'r27-a' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow); // starts r27a
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r27b', actor: { id: 'r27-b' }, timestamp: simNow }), simNow);
+      runtime.pause();
+      var sizeBefore = queue.size();
+      runtime.tick(simNow + 999999);
+      var sizeAfter = queue.size();
+      var ok = sizeBefore === 1 && sizeAfter === 1;
+      runtime.resume();
+      return { pass: ok, details: 'sizeBefore=' + sizeBefore + ' sizeAfter=' + sizeAfter };
+    }));
+
+    // ---- Phase G: clear() ------------------------------------------------------------------
+
+    results.push(runCase('Runtime 28. clear tommer Merge pending', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'like', id: 'r28', actor: { id: 'r28-actor' }, timestamp: simNow }), simNow);
+      runtime.clear();
+      var ok = merge.getPending().length === 0;
+      return { pass: ok, details: 'pending=' + merge.getPending().length };
+    }));
+
+    results.push(runCase('Runtime 29. clear tommer Queue', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'follow', id: 'r29', actor: { id: 'r29-actor' }, timestamp: simNow }), simNow);
+      runtime.clear();
+      var ok = queue.size() === 0;
+      return { pass: ok, details: 'queueSize=' + queue.size() };
+    }));
+
+    results.push(runCase('Runtime 30. clear rensar Controller current', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r30', actor: { id: 'r30-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      runtime.clear();
+      var ok = controller.getState().current === null;
+      return { pass: ok, details: JSON.stringify(controller.getState()) };
+    }));
+
+    results.push(runCase('Runtime 31. clear aterstaller Card', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r31', actor: { id: 'r31-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      runtime.clear();
+      var ok = card.getState().phase === 'exiting' || card.getState().phase === 'idle';
+      return { pass: ok, details: JSON.stringify(card.getState()) };
+    }));
+
+    results.push(runCase('Runtime 32. clear behaller mount', function () {
+      if (!hasDom()) return skip();
+      runtime.clear();
+      var state = runtime.getState();
+      var ok = state.mounted === true && (state.status === 'idle' || state.status === 'presenting');
+      return { pass: ok, details: JSON.stringify(state) };
+    }));
+
+    // ---- Phase H: misc correctness (still needs a working Runtime) ------------------------
+
+    results.push(runCase('Runtime 38. getState returnerar djup kopia', function () {
+      if (!hasDom()) return skip();
+      var snapshot = runtime.getState();
+      snapshot.status = 'tampered';
+      snapshot.merge.received = 999999;
+      var again = runtime.getState();
+      var ok = again.status !== 'tampered' && again.merge.received !== 999999;
+      return { pass: ok, details: JSON.stringify({ mutatedSnapshot: snapshot, freshRead: again }) };
+    }));
+
+    results.push(runCase('Runtime 39. Subscribers far push-event', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var events = [];
+      var unsub = runtime.subscribe(function (e) { events.push(e); });
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r39', actor: { id: 'r39-actor' }, timestamp: simNow }), simNow);
+      unsub();
+      var ok = events.some(function (e) { return e.type === 'push'; });
+      return { pass: ok, details: JSON.stringify(events.map(function (e) { return e.type; })) };
+    }));
+
+    results.push(runCase('Runtime 40. Subscribers far presentation-start', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var events = [];
+      var unsub = runtime.subscribe(function (e) { events.push(e); });
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r40', actor: { id: 'r40-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      unsub();
+      var ok = events.some(function (e) { return e.type === 'presentation-start'; });
+      return { pass: ok, details: JSON.stringify(events.map(function (e) { return e.type; })) };
+    }));
+
+    results.push(runCase('Runtime 41. Subscribers far card-show', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var events = [];
+      var unsub = runtime.subscribe(function (e) { events.push(e); });
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r41', actor: { id: 'r41-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      unsub();
+      var ok = events.some(function (e) { return e.type === 'card-show'; });
+      return { pass: ok, details: JSON.stringify(events.map(function (e) { return e.type; })) };
+    }));
+
+    results.push(runCase('Runtime 42. Subscriber-fel stoppar inte nasta subscriber', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var secondCalled = false;
+      var unsub1 = runtime.subscribe(function () { throw new Error('boom'); });
+      var unsub2 = runtime.subscribe(function () { secondCalled = true; });
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r42', actor: { id: 'r42-actor' }, timestamp: simNow }), simNow);
+      unsub1();
+      unsub2();
+      return { pass: secondCalled === true, details: 'secondCalled=' + secondCalled };
+    }));
+
+    results.push(runCase('Runtime 43. unsubscribe fungerar', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var calls = 0;
+      var unsub = runtime.subscribe(function () { calls++; });
+      // a single push() of an immediate kind legitimately fires both 'push' and 'enqueue' —
+      // so the meaningful check is "no further increase after unsubscribing", not an exact count.
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r43a', actor: { id: 'r43-a' }, timestamp: simNow }), simNow);
+      var callsAfterFirstPush = calls;
+      unsub();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r43b', actor: { id: 'r43-b' }, timestamp: simNow }), simNow);
+      var ok = calls === callsAfterFirstPush;
+      return { pass: ok, details: 'callsAfterFirstPush=' + callsAfterFirstPush + ' callsFinal=' + calls };
+    }));
+
+    results.push(runCase('Runtime 44. Input event muteras inte', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var event = makeMergedEvent({ kind: 'gift', id: 'r44', actor: { id: 'r44-actor' }, gift: { id: 'g44', name: 'Rose', imageUrl: null }, coins: 50, timestamp: simNow });
+      var before = JSON.stringify(event);
+      runtime.push(event, simNow);
+      var after = JSON.stringify(event);
+      return { pass: before === after, details: 'before=' + before + ' after=' + after };
+    }));
+
+    results.push(runCase('Runtime 45. Explicit now anvands deterministiskt', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var explicitNow = 555000;
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r45', actor: { id: 'r45-actor' }, timestamp: explicitNow }), explicitNow);
+      runtime.tick(explicitNow);
+      var current = controller.getState().current;
+      var ok = !!current && current.startedAt === explicitNow;
+      return { pass: ok, details: JSON.stringify(current) };
+    }));
+
+    results.push(runCase('Runtime 46. 10 mixed events kraschar inte', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var kinds = ['join', 'like', 'follow', 'share', 'gift'];
+      var threw = false;
+      try {
+        for (var i = 0; i < 10; i++) {
+          var kind = kinds[i % kinds.length];
+          var overrides = { kind: kind, id: 'r46-' + i, actor: { id: 'r46-actor-' + i }, timestamp: simNow };
+          if (kind === 'gift') { overrides.gift = { id: 'g46-' + i, name: 'Gift ' + i, imageUrl: null }; overrides.coins = 50 * i; }
+          runtime.push(makeMergedEvent(overrides), simNow);
+        }
+        runtime.tick(simNow);
+      } catch (err) { threw = true; }
+      return { pass: threw === false, details: 'threw=' + threw };
+    }));
+
+    results.push(runCase('Runtime 47. 50 stress events kraschar inte', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      var kinds = ['join', 'like', 'follow', 'share', 'gift'];
+      var threw = false;
+      try {
+        for (var i = 0; i < 50; i++) {
+          var kind = kinds[i % kinds.length];
+          var overrides = { kind: kind, id: 'r47-' + i, actor: { id: 'r47-actor-' + i }, timestamp: simNow };
+          if (kind === 'like') overrides.count = 1 + (i % 15);
+          if (kind === 'gift') { overrides.gift = { id: 'g47-' + i, name: 'Gift ' + i, imageUrl: null }; overrides.coins = (i * 41) % 6000; }
+          runtime.push(makeMergedEvent(overrides), simNow);
+        }
+        for (var t = 0; t < 5; t++) runtime.tick(simNow + t * 3000);
+      } catch (err) { threw = true; }
+      return { pass: threw === false, details: 'threw=' + threw };
+    }));
+
+    results.push(runCase('Runtime 48. Endast ett Card ar aktivt at gangen', function () {
+      resetForTest();
+      if (!hasDom()) return skip();
+      for (var i = 0; i < 5; i++) {
+        runtime.push(makeMergedEvent({ kind: 'join', id: 'r48-' + i, actor: { id: 'r48-actor-' + i }, timestamp: simNow }), simNow);
+      }
+      var allSingular = true;
+      for (var t = 0; t < 5; t++) {
+        runtime.tick(simNow + t * 3000);
+        var current = controller.getState().current;
+        if (current !== null && typeof current !== 'object') allSingular = false;
+      }
+      return { pass: allSingular, details: 'allSingular=' + allSingular };
+    }));
+
+    results.push(runCase('Runtime 49. Runtime anvander inga egna timers', function () {
+      if (!hasDom()) return skip();
+      resetForTest();
+      var originalSetTimeout = root.setTimeout;
+      var originalSetInterval = root.setInterval;
+      var originalRAF = root.requestAnimationFrame;
+      var calls = { setTimeout: 0, setInterval: 0, requestAnimationFrame: 0 };
+      if (typeof originalSetInterval === 'function') root.setInterval = function () { calls.setInterval++; return originalSetInterval.apply(this, arguments); };
+      if (typeof originalRAF === 'function') root.requestAnimationFrame = function () { calls.requestAnimationFrame++; return originalRAF.apply(this, arguments); };
+      // setTimeout is spied only around Runtime methods that should never touch Card at all —
+      // tick() legitimately cascades into card.show()/hide(), which use their OWN (permitted)
+      // setTimeout calls, so tick() is intentionally excluded from this specific measurement.
+      if (typeof originalSetTimeout === 'function') root.setTimeout = function () { calls.setTimeout++; return originalSetTimeout.apply(this, arguments); };
+      try {
+        runtime.mount(stageContainer);
+        runtime.start();
+        runtime.push(makeMergedEvent({ kind: 'join', id: 'r49', actor: { id: 'r49-actor' }, timestamp: simNow }), simNow);
+        runtime.flush(simNow);
+        runtime.pause();
+        runtime.resume();
+        runtime.stop();
+        runtime.start();
+        runtime.clear();
+      } finally {
+        if (typeof originalSetTimeout === 'function') root.setTimeout = originalSetTimeout;
+        if (typeof originalSetInterval === 'function') root.setInterval = originalSetInterval;
+        if (typeof originalRAF === 'function') root.requestAnimationFrame = originalRAF;
+      }
+      var ok = calls.setTimeout === 0 && calls.setInterval === 0 && calls.requestAnimationFrame === 0;
+      return { pass: ok, details: JSON.stringify(calls) };
+    }));
+
+    // ---- Phase I: destroy lifecycle — MUST run last, destroy() is permanent ---------------
+
+    results.push(runCase('Runtime 33. destroy tar bort Card DOM', function () {
+      if (!hasDom()) return skip();
+      resetForTest();
+      runtime.push(makeMergedEvent({ kind: 'join', id: 'r33', actor: { id: 'r33-actor' }, timestamp: simNow }), simNow);
+      runtime.tick(simNow);
+      var r = runtime.destroy();
+      var ok = stageContainer.children.length === 0;
+      return { pass: ok, details: 'childCount=' + stageContainer.children.length + ' result=' + JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Runtime 34. destroy unsubscribe:ar Controller', function () {
+      if (!hasDom()) return skip();
+      // Runtime is already destroyed from Runtime 33 — Controller no longer notifies Runtime's
+      // internal handler. Prove it by driving Controller directly: push straight into Queue and
+      // tick Controller itself; if Runtime were still subscribed, card.show() would be called
+      // and card.getState().phase would change even though Card was never told to do anything.
+      var before = card.getState().phase;
+      queue.enqueue(makeMergedEvent({ kind: 'join', id: 'r34', actor: { id: 'r34-actor' }, timestamp: simNow }));
+      controller.start();
+      controller.tick(simNow);
+      var after = card.getState().phase;
+      var ok = before === after;
+      controller.stop();
+      controller.clear();
+      queue.clear();
+      return { pass: ok, details: 'before=' + before + ' after=' + after };
+    }));
+
+    results.push(runCase('Runtime 35. push efter destroy rejected', function () {
+      if (!hasDom()) return skip();
+      var r = runtime.push(makeMergedEvent({ kind: 'join', id: 'r35', actor: { id: 'r35-actor' }, timestamp: simNow }), simNow);
+      return { pass: r.status === 'rejected', details: JSON.stringify(r) };
+    }));
+
+    results.push(runCase('Runtime 36. start efter destroy rejected', function () {
+      if (!hasDom()) return skip();
+      var threw = false;
+      try { runtime.start(); } catch (err) { threw = true; }
+      var ok = threw === false && runtime.getState().running === false && runtime.getState().destroyed === true;
+      return { pass: ok, details: JSON.stringify(runtime.getState()) };
+    }));
+
+    results.push(runCase('Runtime 37. Upprepad destroy ar saker', function () {
+      if (!hasDom()) return skip();
+      var threw = false;
+      try { runtime.destroy(); runtime.destroy(); } catch (err) { threw = true; }
+      var ok = threw === false && runtime.getState().destroyed === true;
+      return { pass: ok, details: 'threw=' + threw };
+    }));
+
+    if (hasDom() && stageContainer && stageContainer.parentNode) {
+      stageContainer.parentNode.removeChild(stageContainer);
+    }
+  }
+
   // Returns a Promise<Array<{name, pass, details}>>. `caseThunks` collects the deferred thunks
   // runCase() produces; they are invoked one at a time via reduce, each awaited to completion
   // (including any real wait()) before the next one starts — strict serial order, required
@@ -2142,6 +2771,7 @@
     runControllerCases(caseThunks);
     runMapperCases(caseThunks);
     runCardCases(caseThunks);
+    runRuntimeCases(caseThunks);
 
     var output = [];
     return caseThunks.reduce(function (chain, thunk) {

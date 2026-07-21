@@ -217,3 +217,34 @@
  * @property {CardModel} [model]
  * @property {string} [reason]
  */
+
+/**
+ * @typedef {'unmounted'|'stopped'|'idle'|'presenting'|'paused'|'destroyed'} RuntimeStatus
+ */
+
+/**
+ * Return value of recognition-runtime.js's getState() (Steg 9) — always a deep copy. The
+ * merge/queue/controller/card fields are each that module's own getStats()/getState() output
+ * at the moment of the call, also deep-copied — Runtime exposes no live/mutable references.
+ * @typedef {Object} RuntimeState
+ * @property {boolean} mounted
+ * @property {boolean} running
+ * @property {boolean} paused
+ * @property {boolean} destroyed
+ * @property {RuntimeStatus} status
+ * @property {Object} merge
+ * @property {Object} queue
+ * @property {Object} controller
+ * @property {Object} card
+ */
+
+/**
+ * Payload handed to recognition-runtime.js subscribers.
+ * @typedef {Object} RuntimeNotification
+ * @property {'mount'|'start'|'stop'|'pause'|'resume'|'push'|'merge-pending'|'enqueue'|'presentation-start'|'presentation-complete'|'presentation-skip'|'card-show'|'card-hide'|'flush'|'clear'|'destroy'|'error'} type
+ * @property {number} timestamp
+ * @property {Object} [event]
+ * @property {Object} [presentation]
+ * @property {CardModel} [model]
+ * @property {string} [reason]
+ */
