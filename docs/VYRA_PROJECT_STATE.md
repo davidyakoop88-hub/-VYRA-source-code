@@ -1,6 +1,6 @@
 # VYRA Project State
 
-Last updated: 2026-07-22 (Phase 4 — Premium Widget Design System).
+Last updated: 2026-07-22 (Phase 5 — Premium Gift Widget).
 
 **2026-07-22 re-prioritization**: the user redirected the roadmap's Phase 4 onward away from
 TikTok/overlay-runtime/SaaS work toward the premium live overlay widget system (see
@@ -14,12 +14,13 @@ commit after it follows the new Phase 4-12 sequence.
 
 ## Latest verified commit
 
-Phase 4 (Premium Widget Design System) commit — see git log for exact SHA after push.
-Prior verified commits: `e670003` (Phase 3, `feat(recognition): add generic live event
-adapter contract`), `f022cf0` (Phase 2, `fix(recognition): harden runtime lifecycle and
-failure handling`), `21cffb8` (Phase 0 docs), `540eaac` (Phase 1,
-`feat(recognition): add standalone recognition runtime`). Local HEAD confirmed equal to
-`origin/feature/vyra-vfx-engine` after each push.
+Phase 5 (Premium Gift Widget) commit — see git log for exact SHA after push.
+Prior verified commits: `6dbd631` (Phase 4 refinement, `fix(widgets): differentiate premium
+family animations`), `61bc455` (Phase 4 foundation, `feat(widgets): add premium widget design
+system`), `e670003` (Phase 3, `feat(recognition): add generic live event adapter contract`),
+`f022cf0` (Phase 2, `fix(recognition): harden runtime lifecycle and failure handling`),
+`21cffb8` (Phase 0 docs), `540eaac` (Phase 1, `feat(recognition): add standalone recognition
+runtime`). Local HEAD confirmed equal to `origin/feature/vyra-vfx-engine` after each push.
 
 Working tree at audit time: clean except pre-existing unrelated untracked items
 (`.claude/agents/`, `.claude/data/`, `assets/gifts/`, `assets/images/test/` — not created by
@@ -164,7 +165,43 @@ this roadmap, left untouched).
   fabricating placeholder images was rejected as dishonest; this gap remains disclosed rather
   than papered over.
   Committed separately from the Phase 4 foundation commit, per instruction — see commit list.
-- **Phase 5 — Premium Gift Widget**: not started.
+- **Phase 5 — Premium Gift Widget**: done. Built `premium-gift-widget.js`
+  (`window.VyraPremiumGiftWidget = {mount, show, hide, update, complete, skip, clear, destroy,
+  getState, getStats, subscribe}`), `premium-gift-widget-demo.html`, and
+  `docs/PREMIUM_GIFT_WIDGET_SPEC.md`. No new CSS file — reuses `premium-widget-tokens.css`
+  entirely (no gift-specific styling was needed). This module never renders DOM itself; it
+  owns a priority queue (small=10/medium=20/large=30/legendary=40 ordinal, capped at 20,
+  replace-lowest-if-better when full) and calls `window.VyraPremiumWidget.show/hide/update`
+  (Phase 4) to render whichever presentation is active. **Documented integration decision**:
+  gift events do NOT flow through `window.VyraRecognitionRuntime.push()` — reasoning fully
+  written up in `docs/PREMIUM_GIFT_WIDGET_SPEC.md` "Integration decision" (short version:
+  avoids any risk to the already-passing 262/262 Recognition Engine suite; gift-streak merge
+  semantics don't fit Recognition Merge's generic mechanism anyway). `recognition-runtime.js`
+  and `recognition-card.js` were **not modified** — join/follow/share/like recognition is
+  completely unaffected.
+  **Verified this session** (browser, `premium-gift-widget-demo.html`): tier→family mapping
+  confirmed correct via isolated checks (small→Elite Minimal, medium→Crystal Halo,
+  large→Royal Crown at legendary size — 390px width, legendary→Legendary Portal); full
+  priority-preemption lifecycle confirmed end-to-end (medium shown → small queued → legendary
+  preempts medium (medium marked skipped) → legendary auto-completes on timeout → queued small
+  automatically becomes active → small auto-completes → state cleanly drains to
+  `active:null, queueLength:0`); streak update confirmed to update the **same** underlying
+  widget instance in place (`repeatCount` 1→5, badge text `"×5 · 2,500 coins"`) without any
+  phase-class change (proving no re-entry animation); malformed model (`tier:
+  'not-a-real-tier'`) rejected with a clear reason, no throw; missing-avatar and
+  missing-gift-image fallbacks confirmed present via `.vyra-pw-avatar-fallback`/
+  `.vyra-pw-gift-fallback` classes (an initial check briefly hit a stale-element query
+  artifact — same category of issue as Phase 4's throttling findings, resolved by re-testing
+  in isolation); long name (46-char + emoji) confirmed `text-overflow:ellipsis` with the
+  family's fixed width preserved; 500-event mixed-tier stress test processed in **2ms**
+  synchronously with zero page freeze, zero console errors, `dropped:454` (queue-cap policy
+  correctly enforced), and the system fully drained to a clean idle state within seconds after
+  (`active:null, queueLength:0, widgetDomCount:0`); subscriber error isolation confirmed (a
+  throwing subscriber does not stop `show()` or block a second, working subscriber);
+  `destroy()` confirmed idempotent (called twice, no throw) and non-permanent
+  (`mount()`/`show()` work immediately after). Node load-check: `premium-gift-widget.js`
+  loads cleanly alongside `premium-widget-assets.js`/`premium-widget-core.js` with the exact
+  11-method API surface.
 - **Phase 6 — Top Gifter Widget**: not started.
 - **Phase 7 — MVP Reveal Widget**: not started.
 - **Phase 8 — Natural Like Fountain**: not started.
@@ -228,13 +265,12 @@ roadmap entirely (Account/Workspace is in the explicitly deferred section).
 
 ## Exact next action
 
-Begin **Phase 5 — Premium Gift Widget**: build the first real event-driven widget on top of
-the Phase 4 foundation. Use `window.VyraPremiumWidget.show(model)` with a real gift-tier →
-family/tier mapping (small/medium/large gift coin thresholds — reuse
-`recognition-rules.js`'s `priority.giftThresholds` convention for consistency, or define an
-equivalent local constant if reuse isn't clean) — all 4 families should be usable across gift
-tiers per `docs/PREMIUM_WIDGET_SPEC.md`, this phase decides the actual default
-family-per-tier mapping and wires it to real gift image/amount/coins data. Does not touch
-`recognition-card.js`/`recognition-card.css` or any existing widget in `media.js`. Add tests
-(if a harness is started, see "Known gaps" above) and/or a manual verification pass, then
-commit as `feat(widgets): add premium gift widget`.
+Begin **Phase 6 — Top Gifter Widget**: session-based gift ranking display (configurable time
+window, total coins, total gifts, streak info, profile+gift imagery as one composition, no
+requirement to show the gift name), built on the Phase 4 visual families, with its own
+ranking engine **separate from Card Mapper** (per the original roadmap prompt). Consider
+whether it should also be separate from `premium-gift-widget.js`'s presentation queue (likely
+yes — Top Gifter is a **persistent** display, not a transient preempt-able presentation like
+Phase 5's gifts) or share only the underlying `window.VyraPremiumWidget` render layer. Does
+not touch `recognition-card.js`/`media.js`/`premium-gift-widget.js`. Commit as
+`feat(widgets): add top gifter widget`.

@@ -63,16 +63,24 @@ visually distinct widget families (Crystal Halo, Royal Crown, Legendary Portal, 
 Minimal), see `VYRA_ARCHITECTURE.md` §10. Note: pixel screenshots could not be captured in
 this session's environment (tool timeout, unrelated to the widget code) — visual QA relied on
 DOM/geometry/computed-style inspection instead, disclosed as a gap in `VYRA_PROJECT_STATE.md`.
+Also done: **Premium Gift Widget** (Phase 5, commit — see `VYRA_PROJECT_STATE.md`:
+`premium-gift-widget.js`, `premium-gift-widget-demo.html`,
+`docs/PREMIUM_GIFT_WIDGET_SPEC.md`). Priority-queue presentation router (small/medium/large/
+legendary tiers, preemption, streak-update-in-place, 20-item capped queue) that calls Phase
+4's `window.VyraPremiumWidget` to render — never renders DOM itself. **Documented decision**:
+gift events do not flow through `recognition-runtime.js`, to avoid any risk to the
+262/262-passing Recognition Engine suite (full reasoning in the spec file's "Integration
+decision" section). `recognition-runtime.js`/`recognition-card.js` untouched.
 
 ## What's next
 
-`VYRA_PROJECT_STATE.md` → "Exact next action": **Phase 5 — Premium Gift Widget**. Build the
-first real event-driven widget on the Phase 4 foundation via
-`window.VyraPremiumWidget.show(model)`, mapping real gift tiers to family/tier choices. Does
-not touch `recognition-card.js`/`media.js`/any existing widget.
+`VYRA_PROJECT_STATE.md` → "Exact next action": **Phase 6 — Top Gifter Widget**. Session-based
+gift ranking display on the Phase 4 visual families, with its own ranking engine separate
+from Card Mapper — decide whether it shares Phase 5's presentation queue or needs its own
+(likely its own, since Top Gifter is persistent, not a transient preemptable presentation).
 
 **Full new phase order** (see `VYRA_MASTER_ROADMAP.md` for details): Phase 4 Premium Widget
-Design System (done) → 5 Premium Gift Widget → 6 Top Gifter Widget → 7 MVP Reveal Widget → 8
+Design System (done) → 5 Premium Gift Widget (done) → 6 Top Gifter Widget → 7 MVP Reveal Widget → 8
 Natural Like Fountain → 9 Match Widgets (X2/X3/Glove/Booster) → 10 Premium Widget Overlay
 Integration → 11 TikTok LIVE Adapter → 12 OBS/TikTok LIVE Studio Validation. Billing,
 analytics, campaigns, AI, account/workspace, and general SaaS expansion are explicitly
@@ -121,7 +129,8 @@ If starting a fresh session to continue this work, paste:
 > Follow the working rules listed in `VYRA_HANDOFF.md`. Note the 2026-07-22
 > re-prioritization: the near-term roadmap is the premium widget system (Phases 4-12), not
 > TikTok/SaaS work — do not start billing/analytics/campaigns/AI/accounts/workspaces without
-> the user re-prioritizing again. Complete Phase 5 (Premium Gift Widget), building on
-> `premium-widget-core.js`/`docs/PREMIUM_WIDGET_SPEC.md` from Phase 4, run any available
-> tests/manual verification, commit with message `feat(widgets): add premium gift widget`,
-> update the project-management docs, then continue to Phase 6.
+> the user re-prioritizing again. Complete Phase 6 (Top Gifter Widget), building on
+> `premium-widget-core.js` from Phase 4 and following `premium-gift-widget.js`'s established
+> conventions from Phase 5, run manual verification, commit with message
+> `feat(widgets): add top gifter widget`, update the project-management docs, then continue to
+> Phase 7.
