@@ -84,6 +84,47 @@ under budget). All timers are generation-guarded `setTimeout` calls exactly like
 `recognition-card.js`'s `scheduleTimer`/`clearAllTimers`/`pendingTimers` pattern — no
 `setInterval`, no `requestAnimationFrame` loop anywhere in `premium-widget-core.js`.
 
+## Per-family animation language
+
+Added in the Phase 4 refinement pass (2026-07-22). The JS-level `enterMs`/`holdMs`/`exitMs`
+scheduling above is shared, but each family drives it through a **genuinely different CSS
+mechanism** — not the same keyframes with different durations. All of this lives in
+`premium-widget-tokens.css`; `premium-widget-core.js` was not changed for this pass (it only
+ever toggles the same four phase classes — `vyra-pw-phase-anticipation` /
+`-reveal` / `-settled` / `-exit` — every family-specific behavior below is pure CSS reacting
+to those classes plus the family class already on the widget root).
+
+| Family | Entrance | Hold (idle) | Exit |
+|---|---|---|---|
+| **Crystal Halo** | "Soft refractive assembly" — panel scales in from 1.08× fully blurred (10px) to sharp, like condensing out of mist; a single diagonal light shimmer sweeps once across the glass (`::after` gradient sweep, `vyra-pw-crystal-shimmer`); the widget's own particle layer doubles as **crystal segments** that fly in from six distinct origin directions (`--pw-seg-x/-y` per particle) and converge on the composition (`vyra-pw-crystal-segment-in`) | Gentle breathing glow — `.vyra-pw-glow` pulses opacity/scale on a slow 4400ms loop (`vyra-pw-crystal-breathe`) | "Dissolves into light fragments" — the same particles scatter back out along their own origin direction while the panel blurs and fades (`vyra-pw-crystal-segment-out` + panel blur/scale) |
+| **Royal Crown** | "Rise and lock" — the whole frame rises from `translateY(46px)` with a firm, no-bounce deceleration (no blur, unlike Crystal Halo); the crown glyph drops from above with visible weight — a brief `scaleY(.88)` compress-on-landing "thud" (`vyra-pw-crown-land`), not a playful bounce | A single slow gold light sweep plays once across the frame border, ~400ms after settling (`vyra-pw-crown-sweep`, `::after` on `.vyra-pw-crown-frame`) — one-shot, not looping | "Frame retracts cleanly" — `scaleY(.7)` collapse toward the bottom edge, no blur, no dispersal — a mechanical retraction, not a dissolve |
+| **Legendary Portal** | Cinematic, staged, three sequential sub-animations for "stronger layered depth than other families": portal rings scale/fade in first (`vyra-pw-portal-ring-in`, 0ms), the avatar pops in second with overshoot (`vyra-pw-portal-avatar-pop`, +160ms delay), the text rises in last (`vyra-pw-portal-text-rise`, +420ms delay) | "Controlled energy" — rings pulse+rotate subtly on a 3600ms loop (`vyra-pw-portal-ring-pulse`) while the particle layer becomes slow-drifting "energy motes" with staggered per-particle delays (`vyra-pw-portal-energy-drift`) | "Portal closes around the composition" — avatar+text collapse first (`vyra-pw-portal-content-fade`, 160ms), rings close in 60ms later (`vyra-pw-portal-ring-close`) — sequenced so the portal visibly closes *after* the composition has already left, not everything fading together |
+| **Elite Minimal** | A `clip-path` **wipe** (`inset(0 100% 0 0 round 999px)` → `inset(0 0 0 0 round 999px)`) — a fundamentally different mechanism from the other three (no transform, no scale, no blur, no keyframes at all) | **Deliberately nearly static** — no idle animation whatsoever, matching the "minimal footprint, dislikes large overlays" brief; the only family with zero hold-phase motion | Quick compact `translateX(16px)` slide + fade — intentionally simpler than the entrance (no wipe on exit) |
+
+Reduced-motion handling: the existing wildcard rule (`.vyra-pw-widget * { animation-duration:
+1ms !important; ... }`) already collapses every animation/transition above, including the new
+infinite hold-phase loops (`animation-iteration-count: 1 !important` stops them looping). A
+second, more targeted block was added specifically for the three families with custom
+*anticipation*-phase overrides (Crystal Halo's blur+scale, Royal Crown's translateY, Elite
+Minimal's clip-path) — the generic `.vyra-pw-phase-anticipation { transform:none; filter:none;
+}` reset has lower CSS specificity than `.vyra-pw-family-X.vyra-pw-phase-anticipation` and
+would never actually win against it, so equal-specificity override rules were added at the end
+of the stylesheet (source order breaks the specificity tie) to guarantee no family ever starts
+from an off-screen/blurred/clipped state under reduced motion, even for the ~1ms the
+transition still technically runs.
+
+**Verification note on timing**: this session's browser automation environment exhibits
+significant (and variable, roughly 2×-10×) `setTimeout` throttling on backgrounded/inactive
+tabs, which made precise mid-animation timing checks across multiple separate tool calls
+unreliable (a check meant to land 750ms into an animation might land only 75ms of *real*
+internal progress in). Verification instead used single, continuous, uninterrupted browser
+scripts with generous real-time budgets to sample the full lifecycle end-to-end (confirmed:
+opacity correctly reaches and holds at 1 through reveal→settled, phase classes transition
+correctly, DOM is cleanly removed after exit) for one family end-to-end, plus **instant,
+synchronous immediate-state checks** (which are not subject to timer throttling) for all four
+families' anticipation-phase starting values, confirming each matches its coded, distinct
+entrance state.
+
 ## Depth layers and z-index
 
 | Layer | z-index (within widget) | Content |

@@ -54,11 +54,15 @@ Engine including the standalone Recognition Runtime (Roadmap Phase 1, commit `54
 Runtime Hardening (Phase 2, commit `f022cf0`), the Generic Live Event Adapter Contract (Phase
 3, commit `e670003`), and — under the **2026-07-22 re-prioritized roadmap** (premium widget
 system, not TikTok/SaaS, is now the near-term goal; see `VYRA_MASTER_ROADMAP.md`) — the
-**Premium Widget Design System** (Phase 4: `premium-widget-core.js`,
+**Premium Widget Design System** (Phase 4, commit `61bc455`: `premium-widget-core.js`,
 `premium-widget-tokens.css`, `premium-widget-assets.js`, `premium-widget-demo.html`,
-`docs/PREMIUM_WIDGET_SPEC.md`). A separate, additive rendering system from
-`recognition-card.js` — 4 visually distinct widget families (Crystal Halo, Royal Crown,
-Legendary Portal, Elite Minimal), see `VYRA_ARCHITECTURE.md` §10.
+`docs/PREMIUM_WIDGET_SPEC.md`, plus a same-day refinement commit differentiating each
+family's entrance/hold/exit animation language — see `docs/PREMIUM_WIDGET_SPEC.md` → "Per-family
+animation language"). A separate, additive rendering system from `recognition-card.js` — 4
+visually distinct widget families (Crystal Halo, Royal Crown, Legendary Portal, Elite
+Minimal), see `VYRA_ARCHITECTURE.md` §10. Note: pixel screenshots could not be captured in
+this session's environment (tool timeout, unrelated to the widget code) — visual QA relied on
+DOM/geometry/computed-style inspection instead, disclosed as a gap in `VYRA_PROJECT_STATE.md`.
 
 ## What's next
 

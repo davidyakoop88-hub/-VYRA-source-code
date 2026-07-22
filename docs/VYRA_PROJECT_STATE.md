@@ -120,6 +120,50 @@ this roadmap, left untouched).
   specific to this feature. Geometry/computed-style inspection substituted for pixel review
   (see above); a genuine pixel-level visual pass is still recommended once screenshot tooling
   is available, flagged in `VYRA_ARCHITECTURE.md` §10.
+
+- **Phase 4 refinement pass (2026-07-22, same day)**: the initial 4 families shared generic
+  enter/exit transitions (only Legendary Portal had a distinct animation). Per stricter review,
+  `premium-widget-tokens.css` was extended with a genuinely distinct animation LANGUAGE per
+  family (different CSS mechanisms, not the same keyframes retimed) — see
+  `docs/PREMIUM_WIDGET_SPEC.md` → "Per-family animation language" for the full breakdown:
+  Crystal Halo (blur-scale materialize + particle-based "crystal segments" assembling in/
+  dispersing out + breathing glow hold), Royal Crown (rise-and-lock frame + weighted crown
+  "thud" landing + one-shot gold sweep hold + clean vertical retract exit), Legendary Portal
+  (3-stage layered entrance: rings→avatar→text, each independently delayed + energy-mote/
+  ring-pulse hold + portal-closes-after-composition exit), Elite Minimal (`clip-path` wipe
+  entrance — a fundamentally different mechanism from the other three, zero transform/blur/
+  keyframes — deliberately static hold, compact slide exit). `premium-widget-core.js` was
+  **not** modified — every family difference is pure CSS reacting to the same 4 phase classes
+  the JS already toggled. Reduced-motion overrides were extended to cover the new per-family
+  anticipation-phase states (added at end of stylesheet to win the cascade over the
+  lower-specificity generic reset).
+  **Verified**: zero console errors across ~400 total show/hide cycles (100 per family, direct
+  API); each family's immediate (synchronous, throttle-immune) anticipation-phase state
+  confirmed distinct (Crystal Halo: `scale(1.08) blur(10px)`; Royal Crown: `translateY(46px)`,
+  no blur; Legendary Portal: `scale(.92) translateY(9.2px) blur(4px)`; Elite Minimal:
+  `clip-path: inset(0 100% 0 0 round 999px)`, no transform/blur — four distinct starting
+  states, confirming genuinely different mechanisms); one full real-time lifecycle (Crystal
+  Halo, sampled every ~400ms over 20 real seconds) confirmed opacity correctly reaches and
+  holds at 1 through reveal→settled, phases transition correctly, DOM is cleanly removed after
+  exit; destroy()/mount() re-cycle confirmed safe; long-name (46-char + emoji) confirmed to
+  render its full text via `textContent` with `text-overflow:ellipsis` while the widget's own
+  bounding-box width stayed fixed at its family's silhouette width (260px for Elite Minimal) —
+  "long names must not change the widget silhouette" confirmed, not just assumed; missing
+  avatar/gift fallback re-confirmed unaffected by the animation changes across all 4 families;
+  root background confirmed `rgba(0,0,0,0)` (transparent, browser-source-ready).
+  **Verification methodology note**: this session's browser environment exhibits significant,
+  variable (~2×-10×) `setTimeout` throttling on the automation tab, discovered mid-verification
+  when early multi-step polling checks showed implausible results (opacity apparently stuck at
+  0 well past a widget's `enterMs`) — root-caused via a continuous single-script timeline
+  (avoids inter-call round-trip gaps) proving the CSS was correct all along and the earlier
+  readings were a measurement artifact, not a defect. Documented in
+  `docs/PREMIUM_WIDGET_SPEC.md` so a future session doesn't waste time rediscovering this.
+  **Screenshots**: retried (per explicit instruction) at the exact filenames requested — still
+  timed out consistently, confirmed unrelated to this pass's CSS changes (the tool already
+  failed identically before these changes existed). No screenshot files were created —
+  fabricating placeholder images was rejected as dishonest; this gap remains disclosed rather
+  than papered over.
+  Committed separately from the Phase 4 foundation commit, per instruction — see commit list.
 - **Phase 5 — Premium Gift Widget**: not started.
 - **Phase 6 — Top Gifter Widget**: not started.
 - **Phase 7 — MVP Reveal Widget**: not started.
