@@ -257,7 +257,7 @@ if(new URLSearchParams(location.search).has('overlay')){
   const fitOverlayCanvas=()=>{
     const canvas=document.querySelector('.canvas');
     if(!canvas)return;
-    const[baseW,baseH]=state.canvasFormat==='landscape'?[768,432]:[432,768];
+    const[baseW,baseH]=canvasDims(state.canvasFormat);
     const scale=Math.min(window.innerWidth/baseW,window.innerHeight/baseH);
     canvas.style.left=((window.innerWidth-baseW*scale)/2)+'px';
     canvas.style.top=((window.innerHeight-baseH*scale)/2)+'px';
