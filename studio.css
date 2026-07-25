@@ -304,3 +304,6 @@ html.overlay-output .resize-handle{display:none!important}
 .lf-preset-card.selected .lf-preset-name{color:var(--text-primary,#f7f2ff)}
 .lf-preset-check{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:var(--border-active,#b13cff);color:#fff;font-style:normal;font-size:10px;line-height:16px;text-align:center;opacity:0;transform:scale(.5);transition:opacity .15s ease,transform .15s ease;box-shadow:0 0 8px rgba(177,60,255,.6)}
 .lf-preset-card.selected .lf-preset-check{opacity:1;transform:scale(1)}
+.editor-toolbar{align-items:center!important;gap:10px!important;justify-content:flex-start!important;flex-wrap:wrap!important}
+#saveProject{min-height:40px!important;padding:10px 16px!important;background:linear-gradient(135deg,#8d24ee,#ce3cff)!important;border:1px solid rgba(255,255,255,.18)!important;color:#fff!important;font-size:10px!important;font-weight:800!important;letter-spacing:.03em!important;box-shadow:0 0 18px rgba(165,37,255,.35)!important}
+#saveProject:hover{transform:translateY(-1px);filter:brightness(1.06)}
