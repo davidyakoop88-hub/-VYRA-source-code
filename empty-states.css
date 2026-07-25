@@ -1,0 +1,434 @@
+/* ============================================================
+   VYRA — Empty States
+   ============================================================
+   Smart innehåll för tomma/sparsamma tillstånd i VYRA
+   ============================================================ */
+
+/* === Tokens (använd befintliga eller definiera här) === */
+:root {
+  --es-bg: #0a0914;
+  --es-bg-soft: #110f1f;
+  --es-bg-card: #1a1530;
+  --es-border: #2a2541;
+  --es-text: #e8e6f0;
+  --es-text-soft: #a09bb5;
+  --es-text-muted: #6b6480;
+  --es-accent: #7c5cff;
+  --es-accent-2: #5b8cff;
+  --es-accent-glow: rgba(124, 92, 255, 0.3);
+  --es-success: #45e8a8;
+  --es-warning: #ffb547;
+  --es-error: #ff5e7e;
+}
+
+/* === Huvudwrapper för tomma tillstånd === */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  min-height: 320px;
+  background: var(--es-bg-soft);
+  border: 1px dashed var(--es-border);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  animation: fade-in 0.4s ease;
+}
+
+/* Subtle bakgrundseffekt */
+.empty-state::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 20%, var(--es-accent-glow) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(91, 140, 255, 0.15) 0%, transparent 50%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.empty-state > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* === Ikon / Emoji === */
+.empty-state__icon {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px var(--es-accent-glow));
+}
+
+/* Större "showcase"-version för förstasides-tomt */
+.empty-state--hero .empty-state__icon {
+  font-size: 5rem;
+}
+
+/* === Title === */
+.empty-state__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--es-text);
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.empty-state--hero .empty-state__title {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, var(--es-accent), var(--es-accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* === Beskrivning === */
+.empty-state__description {
+  font-size: 1rem;
+  color: var(--es-text-soft);
+  max-width: 480px;
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.empty-state--hero .empty-state__description {
+  font-size: 1.125rem;
+  max-width: 540px;
+}
+
+/* === Åtgärdsknappar === */
+.empty-state__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.empty-state__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  text-decoration: none;
+}
+
+.empty-state__action:hover {
+  transform: translateY(-2px);
+}
+
+.empty-state__action:active {
+  transform: translateY(0);
+}
+
+/* Primär knapp */
+.empty-state__action--primary {
+  background: linear-gradient(135deg, var(--es-accent) 0%, var(--es-accent-2) 100%);
+  color: white;
+  box-shadow: 0 4px 14px var(--es-accent-glow);
+}
+
+.empty-state__action--primary:hover {
+  box-shadow: 0 6px 20px rgba(124, 92, 255, 0.45);
+}
+
+/* Sekundär knapp */
+.empty-state__action--secondary {
+  background: transparent;
+  color: var(--es-text);
+  border: 1px solid var(--es-border);
+}
+
+.empty-state__action--secondary:hover {
+  background: var(--es-bg-card);
+  border-color: var(--es-accent);
+}
+
+/* Ghost-knapp */
+.empty-state__action--ghost {
+  background: transparent;
+  color: var(--es-text-soft);
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+}
+
+.empty-state__action--ghost:hover {
+  color: var(--es-accent);
+}
+
+/* === Sekundära element (tips, exempel) === */
+.empty-state__tips {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--es-border);
+  width: 100%;
+  max-width: 480px;
+}
+
+.empty-state__tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--es-text-soft);
+  padding: 0.5rem 0;
+  text-align: left;
+}
+
+.empty-state__tip-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  text-align: center;
+}
+
+/* === Showcase / exempel-widgets === */
+.empty-state__examples {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 540px;
+  margin: 1.5rem 0;
+}
+
+.empty-state__example {
+  background: var(--es-bg-card);
+  border: 1px solid var(--es-border);
+  border-radius: 8px;
+  padding: 1rem 0.75rem;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  text-align: center;
+}
+
+.empty-state__example:hover {
+  transform: translateY(-3px);
+  border-color: var(--es-accent);
+}
+
+.empty-state__example-emoji {
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.empty-state__example-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--es-text);
+}
+
+.empty-state__example-hint {
+  font-size: 0.6875rem;
+  color: var(--es-text-muted);
+  margin-top: 0.125rem;
+}
+
+/* === Kompakt variant === */
+.empty-state--compact {
+  padding: 1.5rem 1rem;
+  min-height: 160px;
+  border-radius: 12px;
+}
+
+.empty-state--compact .empty-state__icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state--compact .empty-state__title {
+  font-size: 1.125rem;
+}
+
+.empty-state--compact .empty-state__description {
+  font-size: 0.875rem;
+}
+
+/* === Inline variant (för sökresultat m.m.) === */
+.empty-state--inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: left;
+  flex-direction: row;
+  min-height: auto;
+  border-style: dashed;
+}
+
+.empty-state--inline .empty-state__icon {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.empty-state--inline .empty-state__body {
+  flex: 1;
+}
+
+.empty-state--inline .empty-state__title {
+  font-size: 0.9375rem;
+  margin-bottom: 0.125rem;
+}
+
+.empty-state--inline .empty-state__description {
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+/* === Success / Checking state === */
+.empty-state--loading {
+  border-style: solid;
+  border-color: var(--es-border);
+}
+
+.empty-state__loader {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--es-border);
+  border-top-color: var(--es-accent);
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  animation: spin 0.8s linear infinite;
+}
+
+/* === Templates / mallar-grid === */
+.empty-state__templates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 480px;
+  margin-top: 1.5rem;
+}
+
+.empty-state__template {
+  background: var(--es-bg-card);
+  border: 1px solid var(--es-border);
+  border-radius: 10px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.empty-state__template:hover {
+  border-color: var(--es-accent);
+  transform: translateY(-2px);
+}
+
+.empty-state__template-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: linear-gradient(135deg, var(--es-accent), var(--es-accent-2));
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  opacity: 0.7;
+  position: relative;
+  overflow: hidden;
+}
+
+.empty-state__template-thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3h18v18H3z" fill="none"/></svg>') center/60% no-repeat;
+  background-color: rgba(255,255,255,0.05);
+}
+
+.empty-state__template-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--es-text);
+}
+
+.empty-state__template-meta {
+  font-size: 0.75rem;
+  color: var(--es-text-muted);
+  margin-top: 0.25rem;
+}
+
+/* === Animations === */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Pulse för "live"-tillstånd === */
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(69, 232, 168, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(69, 232, 168, 0); }
+}
+
+.empty-state--live .empty-state__icon {
+  animation: float 3s ease-in-out infinite, live-pulse 2s ease-in-out infinite;
+}
+
+/* === Animerad demo-figur (för showcase) === */
+.empty-state__demo-svg {
+  width: 200px;
+  height: 120px;
+  margin: 0 auto 1rem;
+  opacity: 0.8;
+}
+
+/* === Welcome back state (efter frånvaro) === */
+.empty-state--welcome .empty-state__title {
+  background: linear-gradient(135deg, var(--es-accent), var(--es-success));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* === Tips-banner (compact) === */
+.empty-state__banner {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.1), rgba(91, 140, 255, 0.05));
+  border: 1px solid rgba(124, 92, 255, 0.25);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--es-text-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 480px;
+  margin-top: 1rem;
+}
+
+.empty-state__banner-icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+}
+
+/* === Utility classes === */
+.is-hidden { display: none !important; }
+.is-fading-out { opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; }
+
+/* === Reduced motion === */
+@media (prefers-reduced-motion: reduce) {
+  .empty-state__icon,
+  .empty-state--live .empty-state__icon,
+  .empty-state__loader {
+    animation: none !important;
+  }
+  .empty-state { animation: none; }
+}
+
