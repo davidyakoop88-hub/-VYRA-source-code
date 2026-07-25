@@ -213,9 +213,7 @@
     });
   };
 
-  // ---- Bottom toolbar: Resolution selector + Export Overlay button, appended to the existing overlay-link-bar ----
-  const wsToolbarBind = bind;
-  bind = function () {
+  // Overlay pages auto-render on a setTimeout(0) right after page load
     wsToolbarBind();
     if (view !== 'editor') return;
     const bar = document.querySelector('.overlay-link-bar');
