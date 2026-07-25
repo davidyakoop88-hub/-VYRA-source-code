@@ -213,7 +213,9 @@
     });
   };
 
-  // Overlay pages auto-render on a setTimeout(0) right after page load
+  // ---- Bind: add resolution + export controls to the Layout toolbar (only ever shown there) ----
+  const wsToolbarBind = bind;
+  bind = function () {
     wsToolbarBind();
     if (view !== 'editor') return;
     const bar = document.querySelector('.overlay-link-bar');
