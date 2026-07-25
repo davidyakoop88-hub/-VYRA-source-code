@@ -257,9 +257,10 @@ if(new URLSearchParams(location.search).has('overlay')){
   const fitOverlayCanvas=()=>{
     const canvas=document.querySelector('.canvas');
     if(!canvas)return;
-    const scale=Math.min(window.innerWidth/432,window.innerHeight/768);
-    canvas.style.left=((window.innerWidth-432*scale)/2)+'px';
-    canvas.style.top=((window.innerHeight-768*scale)/2)+'px';
+    const[baseW,baseH]=state.canvasFormat==='landscape'?[768,432]:[432,768];
+    const scale=Math.min(window.innerWidth/baseW,window.innerHeight/baseH);
+    canvas.style.left=((window.innerWidth-baseW*scale)/2)+'px';
+    canvas.style.top=((window.innerHeight-baseH*scale)/2)+'px';
     canvas.style.transform=`scale(${scale})`;
   };
   const overlayFitRender=render;render=function(){overlayFitRender();fitOverlayCanvas()};
