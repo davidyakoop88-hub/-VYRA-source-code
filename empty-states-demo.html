@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VYRA — Empty States Demo</title>
+<link rel="stylesheet" href="empty-states.css">
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--es-bg);
+    color: var(--es-text);
+    margin: 0;
+    padding: 2rem 1rem;
+  }
+  .demo-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .demo-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  .demo-header h1 {
+    font-size: 2.25rem;
+    margin: 0;
+    background: linear-gradient(135deg, var(--es-accent), var(--es-accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .demo-header p {
+    color: var(--es-text-soft);
+    margin-top: 0.5rem;
+  }
+  .demo-controls {
+    background: var(--es-bg-soft);
+    border: 1px solid var(--es-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .demo-controls h3 {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--es-text-soft);
+  }
+  .demo-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.5rem;
+  }
+  .demo-btn {
+    padding: 0.625rem 1rem;
+    background: var(--es-bg-card);
+    border: 1px solid var(--es-border);
+    border-radius: 8px;
+    color: var(--es-text);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .demo-btn:hover {
+    border-color: var(--es-accent);
+    background: rgba(124, 92, 255, 0.1);
+  }
+  .demo-btn.active {
+    background: linear-gradient(135deg, var(--es-accent), var(--es-accent-2));
+    color: white;
+    border-color: transparent;
+  }
+  .demo-stage {
+    background: var(--es-bg-soft);
+    border-radius: 16px;
+    padding: 2rem;
+    min-height: 480px;
+    position: relative;
+  }
+  .demo-stage-label {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--es-text-muted);
+    background: var(--es-bg-card);
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid var(--es-border);
+  }
+  .demo-state-name {
+    font-weight: 600;
+    color: var(--es-text);
+  }
+  .demo-info {
+    margin-top: 2rem;
+    background: var(--es-bg-card);
+    border: 1px solid var(--es-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .demo-info h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+    color: var(--es-text-soft);
+  }
+  .demo-info code {
+    display: block;
+    background: var(--es-bg);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.8125rem;
+    color: var(--es-accent);
+    white-space: pre-wrap;
+  }
+  .demo-actions-log {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--es-bg);
+    border-radius: 6px;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.8125rem;
+    color: var(--es-text-soft);
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .demo-actions-log::before {
+    content: '📋 ';
+  }
+</style>
+</head>
+<body>
+<main class="demo-shell">
+  <header class="demo-header">
+    <h1>VYRA — Smart tomma tillstånd</h1>
+    <p>Klicka på en state för att se hur den ser ut. Klicka på knappar för att se actions.</p>
+  </header>
+
+  <section class="demo-controls">
+    <h3>States</h3>
+    <div class="demo-buttons">
+      <button class="demo-btn active" data-state="firstTime">🎉 Första gången</button>
+      <button class="demo-btn" data-state="noWidgets">📦 Inga widgets (tom)</button>
+      <button class="demo-btn" data-state="addMore">💡 Lägg till fler</button>
+      <button class="demo-btn" data-state="noSearch">🔍 Inga sökresultat</button>
+      <button class="demo-btn" data-state="noTemplates">📋 Inga mallar</button>
+      <button class="demo-btn" data-state="loading">🔄 Laddar</button>
+      <button class="demo-btn" data-state="welcomeBack">👋 Välkommen tillbaka</button>
+      <button class="demo-btn" data-state="notifications">🔔 Inga notiser</button>
+    </div>
+  </section>
+
+  <section class="demo-stage">
+    <div class="demo-stage-label">
+      <span class="demo-state-name" data-bind="state-name">Första gången</span>
+    </div>
+    <div id="state-container"></div>
+  </section>
+
+  <section class="demo-info">
+    <h4>Usage:</h4>
+    <code>VYRA.EmptyStates.render('#container', { searchQuery: 'gift' })</code>
+
+    <h4 style="margin-top: 1rem;">Actions log:</h4>
+    <div class="demo-actions-log" data-bind="actions-log">Inga actions ännu — klicka på knappar ovan</div>
+  </section>
+</main>
+
+<script src="empty-states.js"></script>
+<script>
+  // === Demo-controller ===
+  const container = document.getElementById('state-container');
+  const stateNameEl = document.querySelector('[data-bind="state-name"]');
+  const actionsLog = document.querySelector('[data-bind="actions-log"]');
+  const buttons = document.querySelectorAll('.demo-btn');
+
+  const stateNames = {
+    firstTime: 'Första gången',
+    noWidgets: 'Inga widgets',
+    addMore: 'Lägg till fler',
+    noSearch: 'Inga sökresultat',
+    noTemplates: 'Inga mallar',
+    loading: 'Laddar',
+    welcomeBack: 'Välkommen tillbaka',
+    notifications: 'Inga notiser',
+  };
+
+  let currentState = 'firstTime';
+
+  function show(state) {
+    currentState = state;
+    stateNameEl.textContent = stateNames[state] || state;
+    buttons.forEach(b => b.classList.toggle('active', b.dataset.state === state));
+
+    let html;
+    switch (state) {
+      case 'firstTime':
+        html = VYRA.EmptyStates.states.firstTime();
+        break;
+      case 'noWidgets':
+        html = VYRA.EmptyStates.states.noWidgets();
+        break;
+      case 'addMore':
+        html = VYRA.EmptyStates.states.addMore();
+        break;
+      case 'noSearch':
+        html = VYRA.EmptyStates.states.noSearchResults('zzz-unknown-xyz-widget');
+        break;
+      case 'noTemplates':
+        html = VYRA.EmptyStates.states.noTemplates();
+        break;
+      case 'loading':
+        html = VYRA.EmptyStates.states.loading('Ansluter till TikTok LIVE-chat...');
+        break;
+      case 'welcomeBack':
+        html = VYRA.EmptyStates.states.welcomeBack(14);
+        break;
+      case 'notifications':
+        html = VYRA.EmptyStates.states.noNotifications();
+        break;
+    }
+    animateTransition(container, html);
+  }
+
+  function animateTransition(el, newHtml) {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(8px)';
+    setTimeout(() => {
+      el.innerHTML = newHtml;
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    }, 200);
+  }
+
+  // Klick på state-knappar
+  buttons.forEach(b => {
+    b.addEventListener('click', () => show(b.dataset.state));
+  });
+
+  // Lyssna på actions från empty-states
+  document.addEventListener('vyra:empty-state-action', (e) => {
+    const time = new Date().toLocaleTimeString();
+    const line = actionsLog.innerHTML;
+    const newLine = `<div>[${time}] <strong>${e.detail.action}</strong></div>`;
+    actionsLog.innerHTML = newLine + line;
+    actionsLog.scrollTop = 0;
+  });
+
+  // Första render
+  show('firstTime');
+
+  // Lyssna på VYRA-integration
+  window.addEventListener('vyra:widget-added', () => {
+    if (currentState === 'firstTime' || currentState === 'noWidgets') {
+      show(currentState === 'firstTime' ? 'addMore' : 'firstTime');
+    }
+  });
+</script>
+</body>
+</html>
+

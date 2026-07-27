@@ -203,8 +203,3 @@
 @keyframes wsGildedIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 .ws-anim-gilded{animation:wsGildedIn var(--ws-anim-duration,.7s) cubic-bezier(.16,1,.3,1) both}
 
-/* ---- Overlay toolbar additions (Resolution + Export, appended into the existing overlay-link-bar) ---- */
-.overlay-link-bar{grid-template-columns:minmax(220px,1fr) auto auto auto auto auto!important}
-.overlay-link-bar select.ws-resolution{background:#141720;border:1px solid #272b36;color:#c9cbd2;border-radius:6px;padding:0 10px;font-size:8px;height:100%}
-.overlay-link-bar button.ws-export{background:var(--purple,#7c5cff)!important;border-color:var(--purple,#7c5cff)!important;color:#fff!important}
-@media(max-width:1200px){.overlay-link-bar select.ws-resolution{display:none}}
