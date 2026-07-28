@@ -20,23 +20,28 @@ function owgOverlayUrl() {
 
 function overlayPreviewHtml() {
   const visibleWidgets = state.widgets.filter(w => !w.hidden);
-  const previewWidget = state.widgets.find(w => w.id === overlayPreviewWidgetId);
-  const stageHtml = overlayDraftPreviewHtml || (previewWidget ? wh(previewWidget) : null);
-  const stageName = overlayDraftPreviewHtml ? overlayDraftPreviewName : (previewWidget ? liveLayerName(previewWidget) : null);
   const emptyStateIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>';
   return `<div class="page-header section-head"><div><h2>Overlay</h2><p>Widgets du lägger till här dyker upp direkt i din layout.</p></div></div>
   <div class="overlay-preview-sidebar">
     <span class="section-header-eyebrow">Vad som visas nu · ${visibleWidgets.length}</span>
     <div class="overlay-widget-list">${visibleWidgets.length ? visibleWidgets.map(w => `<article><i>◇</i><span>${liveLayerName(w)}</span></article>`).join('') : `<div class="empty-state">${emptyStateIcon}<h3>Inga widgets ännu</h3><p>Lägg till en widget från katalogen nedan så visas den här direkt.</p></div>`}</div>
   </div>
-  ${stageHtml ? `<div class="overlay-live-preview">
-    <span class="section-header-eyebrow">Så här ser den ut · ${stageName}</span>
-    <div class="overlay-live-preview-stage">${stageHtml}</div>
-  </div>` : ''}
+  <div class="overlay-live-preview">
+    <span class="section-header-eyebrow">Preview av hela overlayn</span>
+    <div class="overlay-preview-note">
+      Overlay är bara för förhandsvisning.
+      Lägg till och redigera widgets i Layout-fliken.
+    </div>
+    <iframe
+      class="overlay-live-frame"
+      title="Overlay preview"
+      src="${owgOverlayUrl()}"
+      loading="lazy"></iframe>
+  </div>
   <div class="overlay-widget-gallery">
-    <span class="section-header-eyebrow">Alla widgets</span>
-    <p>Klicka på en widget för att lägga till den i din layout, eller använd Preview/Configure/länk-knapparna på kortet.</p>
-    <div class="search-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="widget-search" placeholder="Sök widget..."></div>
+    <h4>Välj widget</h4>
+    <p>Klicka på en widget nedan för att lägga till den i overlayn och fortsätta redigera den direkt.</p>
+    <input class="widget-search" placeholder="Sök widget">
     <div class="widget-catalog"></div>
   </div>`;
 }

@@ -4,7 +4,7 @@
 const WISHLIST_KEY = 'vyra-wishlist';
 // TODO: byt till den riktiga support-/önskemål-adressen när den finns.
 const WISHLIST_EMAIL = 'TODO@exempel.se';
-const wishlistItems = JSON.parse(localStorage.getItem(WISHLIST_KEY) || '[]');
+let wishlistItems;try{wishlistItems=JSON.parse(localStorage.getItem(WISHLIST_KEY)||'[]')}catch(e){console.warn('[VYRA] Ogiltig wishlist-state',e);wishlistItems=[]}
 function saveWishlistItems() { localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistItems)); }
 
 function wishlistHtml() {

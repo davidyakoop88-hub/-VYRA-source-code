@@ -30,6 +30,10 @@
     return Object.values(totals).filter(t => t[metric] > 0).sort((a, b) => b[metric] - a[metric]);
   }
 
+  function needsLiveLeaderboards() {
+    return typeof state !== 'undefined' && !!state?.widgets?.some(w => w.useLiveData && ['templateTopLike', 'templateTopCoins', 'templateTopPoints'].includes(w.type));
+  }
+
   function updateLiveLeaderboards() {
     if (typeof state === 'undefined' || !state?.widgets) return;
     document.querySelectorAll('.vyra-toplike[data-id]').forEach(el => {
@@ -52,10 +56,24 @@
     });
   }
 
-  // Backfill from whatever's still in the server's rolling event buffer, then keep listening live.
-  fetch('/api/events?after=0').then(r => r.json()).then(d => { (d.events || []).forEach(record); }).catch(() => {});
+  // live-client.js already backfills the rolling event buffer and rebroadcasts it as
+  // vyra-live-event, so we only need to listen here instead of fetching the same data twice.
   addEventListener('vyra-live-event', e => record(e.detail || {}));
-  setInterval(updateLiveLeaderboards, 1000);
+
+  let refreshTimer = null;
+  function nextDelay() {
+    return document.visibilityState === 'hidden' ? 6000 : 1500;
+  }
+  function scheduleRefresh(delay = nextDelay()) {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshLoop, delay);
+  }
+  function refreshLoop() {
+    if (needsLiveLeaderboards() && document.visibilityState !== 'hidden') updateLiveLeaderboards();
+    scheduleRefresh();
+  }
+  document.addEventListener('visibilitychange', () => scheduleRefresh());
+  scheduleRefresh(1500);
 
   window.VyraLeaderboard = {
     getTop: (metric = 'likes', count = 10) => sortedTop(metric).slice(0, count)

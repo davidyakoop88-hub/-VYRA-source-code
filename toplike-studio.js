@@ -95,7 +95,7 @@
     const liveMetric = w.liveMetric || (w.type === 'templateTopCoins' ? 'coins' : 'likes');
     out = out.replace(
       '<div class="property-group"><h4>DESIGN',
-      `<div class="property-group"><h4>LIVE-DATA</h4><label><input id="wsLiveData" type="checkbox" ${w.useLiveData ? 'checked' : ''}> Visa riktig aktivitet (inte demo-namn)</label><label>Rangordna efter<select id="wsLiveMetric" ${w.useLiveData ? '' : 'disabled'}><option value="likes"${liveMetric === 'likes' ? ' selected' : ''}>Likes</option><option value="coins"${liveMetric === 'coins' ? ' selected' : ''}>Gåv-coins</option></select></label></div><div class="property-group"><h4>DESIGN`
+      `<div class="property-group"><h4>LIVE-DATA</h4><label><input id="wsLiveData" type="checkbox" ${w.useLiveData ? 'checked' : ''}> Visa riktig aktivitet från liven</label><label>Rangordna efter<select id="wsLiveMetric" ${w.useLiveData ? '' : 'disabled'}><option value="likes"${liveMetric === 'likes' ? ' selected' : ''}>Likes</option><option value="coins"${liveMetric === 'coins' ? ' selected' : ''}>Gåv-coins</option></select></label></div><div class="property-group"><h4>DESIGN`
     );
 
     const skin = w.skin || 'royal-gold';
@@ -121,7 +121,7 @@
     if (autoMedal) autoMedal.onchange = e => { w.autoMedal = e.target.checked; save(); render(); };
 
     const liveData = document.querySelector('#wsLiveData');
-    if (liveData) liveData.onchange = e => { w.useLiveData = e.target.checked; save(); render(); toast(e.target.checked ? 'Visar riktig aktivitet' : 'Visar demodata'); };
+    if (liveData) liveData.onchange = e => { w.useLiveData = e.target.checked; save(); render(); toast(e.target.checked ? 'Visar riktig aktivitet' : 'Visar standardvärden'); };
 
     const liveMetric = document.querySelector('#wsLiveMetric');
     if (liveMetric) liveMetric.onchange = e => { w.liveMetric = e.target.value; save(); render(); };
@@ -211,6 +211,36 @@
       w.profileFrame = btn.dataset.wsFrame; save(); render();
       toast(btn.dataset.wsFrame === 'none' ? 'Profilram borttagen' : `${btn.querySelector('b').textContent} vald`);
     });
+  };
+
+  // ---- Bottom toolbar: Resolution selector + Export Overlay button, appended to the existing overlay-link-bar ----
+  const wsToolbarBind = bind;
+  bind = function () {
+    wsToolbarBind();
+    if (view !== 'editor') return;
+    const bar = document.querySelector('.overlay-link-bar');
+    if (!bar || bar.querySelector('.ws-resolution')) return;
+
+    const resolution = document.createElement('select');
+    resolution.className = 'ws-resolution';
+    resolution.innerHTML = '<option value="1080x1920">1080×1920 (9:16)</option><option value="1920x1080">1920×1080 (16:9)</option><option value="1080x1080">1080×1080 (1:1)</option>';
+    resolution.value = localStorage.getItem('vyra-overlay-resolution') || '1080x1920';
+    resolution.onchange = () => { localStorage.setItem('vyra-overlay-resolution', resolution.value); toast('Upplösning: ' + resolution.value); };
+
+    const exportButton = document.createElement('button');
+    exportButton.type = 'button';
+    exportButton.className = 'ws-export';
+    exportButton.textContent = 'Exportera overlay ↓';
+    exportButton.onclick = () => {
+      const blob = new Blob([JSON.stringify({ widgets: state.widgets, resolution: resolution.value }, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'vyra-overlay-export.json'; a.click();
+      URL.revokeObjectURL(url);
+      toast('Overlay exporterad');
+    };
+
+    bar.append(resolution, exportButton);
   };
 
   // Overlay pages auto-render on a setTimeout(0) right after page load (see media.js), which can race

@@ -1,5 +1,13 @@
 const toast=document.querySelector('.toast');
 let toastTimer;
+const prefersReducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+const supportsHover=window.matchMedia('(hover: hover)').matches;
+const t=(key,vars,fallback)=>{
+  return window.VyraI18nHome?.t?.(key,vars)||fallback||key;
+};
+const nav=document.querySelector('nav');
+const menuButton=document.querySelector('.menu');
+const langButtons=[...document.querySelectorAll('[data-lang]')];
 function notify(t){
   toast.textContent=t;
   toast.classList.add('show');
@@ -20,25 +28,107 @@ function popGiftAlert(){
     {opacity:1,transform:'scale(1)',filter:'blur(0)'}
   ],{duration:550,easing:'cubic-bezier(.2,.8,.2,1)'});
 }
-document.querySelector('.test').onclick=()=>{popGiftAlert();notify('Testevent skickat till canvas')};
+document.querySelector('.test').onclick=()=>{popGiftAlert();notify(t('toast.alertShown',{},'Alert visad på canvas'))};
 
-document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>notify(`${b.querySelector('b').textContent} har lagts till på canvas`));
-document.querySelector('.publish').onclick=()=>notify('Overlay publicerad — OBS-länken är redo');
-document.querySelector('.subtle').onclick=()=>notify('Förhandsvisning öppnad');
+document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>notify(t('toast.elementAdded',{name:b.querySelector('b').textContent},`${b.querySelector('b').textContent} har lagts till på canvas`)));
+document.querySelector('.publish').onclick=()=>notify(t('toast.overlayPublished',{},'Overlay publicerad — OBS-länken är redo'));
+document.querySelector('.subtle').onclick=()=>notify(t('toast.previewOpened',{},'Förhandsvisning öppnad'));
 document.querySelectorAll('.colors i').forEach(c=>c.onclick=()=>{
   document.querySelectorAll('.colors i').forEach(x=>x.classList.remove('on'));
   c.classList.add('on');
-  notify('Accentfärgen uppdaterades');
+  notify(t('toast.accentUpdated',{},'Accentfärgen uppdaterades'));
 });
-document.querySelector('.menu').onclick=()=>{
-  const nav=document.querySelector('nav');
-  nav.style.display=nav.style.display==='flex'?'none':'flex';
-  Object.assign(nav.style,{position:'absolute',top:'65px',left:'15px',right:'15px',flexDirection:'column',padding:'20px',background:'#11131a',border:'1px solid #292d38',borderRadius:'10px'});
-};
+function syncLangButtons(){
+  const current=window.VyraI18nHome?.getLang?.()||'sv';
+  langButtons.forEach((button)=>{
+    const isActive=button.dataset.lang===current;
+    button.classList.toggle('active',isActive);
+    button.setAttribute('aria-pressed',String(isActive));
+  });
+}
 
-/* ---- Ambient hero demo: the product mockup stays visibly "live" on page load,
-   instead of sitting static until someone clicks the demo/test buttons. ---- */
-if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+langButtons.forEach((button)=>{
+  button.onclick=()=>{
+    const nextLang=button.dataset.lang||'sv';
+    window.VyraI18nHome?.setLang?.(nextLang);
+    const url=new URL(window.location.href);
+    if(nextLang==='sv') url.searchParams.delete('lang');
+    else url.searchParams.set('lang',nextLang);
+    window.history.replaceState({},'',url.toString());
+    syncLangButtons();
+    nav?.classList.remove('open');
+    menuButton?.setAttribute('aria-expanded','false');
+  };
+});
+
+syncLangButtons();
+
+menuButton&&(menuButton.onclick=()=>{
+  const isOpen=nav?.classList.toggle('open');
+  menuButton.setAttribute('aria-expanded',String(Boolean(isOpen)));
+});
+
+nav?.querySelectorAll('a').forEach((link)=>{
+  link.addEventListener('click',()=>{
+    nav.classList.remove('open');
+    menuButton?.setAttribute('aria-expanded','false');
+  });
+});
+
+function initDepthSurface(element,{maxTiltX=7,maxTiltY=9}={}){
+  if(!element)return;
+  let rafId=0;
+  let currentX=0;
+  let currentY=0;
+  let targetX=0;
+  let targetY=0;
+
+  const render=()=>{
+    currentX+=(targetX-currentX)*0.14;
+    currentY+=(targetY-currentY)*0.14;
+    element.style.setProperty('--tilt-x',`${currentX.toFixed(2)}deg`);
+    element.style.setProperty('--tilt-y',`${currentY.toFixed(2)}deg`);
+    if(Math.abs(targetX-currentX)>0.02||Math.abs(targetY-currentY)>0.02){
+      rafId=requestAnimationFrame(render);
+    }else{
+      rafId=0;
+    }
+  };
+
+  const schedule=()=>{
+    if(!rafId) rafId=requestAnimationFrame(render);
+  };
+
+  element.addEventListener('pointermove',(event)=>{
+    const rect=element.getBoundingClientRect();
+    const px=((event.clientX-rect.left)/rect.width)*2-1;
+    const py=((event.clientY-rect.top)/rect.height)*2-1;
+    targetX=-py*maxTiltX;
+    targetY=px*maxTiltY;
+    element.style.setProperty('--glow-x',`${((event.clientX-rect.left)/rect.width)*100}%`);
+    element.style.setProperty('--glow-y',`${((event.clientY-rect.top)/rect.height)*100}%`);
+    schedule();
+  });
+
+  element.addEventListener('pointerleave',()=>{
+    targetX=0;
+    targetY=0;
+    element.style.setProperty('--glow-x','50%');
+    element.style.setProperty('--glow-y','50%');
+    schedule();
+  });
+}
+
+if(!prefersReducedMotion.matches&&supportsHover){
+  document.querySelectorAll('.product').forEach((element)=>initDepthSurface(element,{maxTiltX:4,maxTiltY:6}));
+  document.querySelectorAll('.premium-card').forEach((element)=>initDepthSurface(element,{maxTiltX:7,maxTiltY:8}));
+  document.querySelectorAll('.feature-grid article').forEach((element)=>initDepthSurface(element,{maxTiltX:6,maxTiltY:7}));
+  document.querySelectorAll('.steps article').forEach((element)=>initDepthSurface(element,{maxTiltX:5,maxTiltY:5}));
+  document.querySelectorAll('.cta').forEach((element)=>initDepthSurface(element,{maxTiltX:3,maxTiltY:4}));
+}
+
+/* Keep the landing page mockup feeling active without exposing internal test wording. */
+if(!prefersReducedMotion.matches){
   const giftFeed=[
     {user:'@alex',gift:'Galaxy',mult:'×5'},
     {user:'@mia',gift:'Universe',mult:'×2'},

@@ -1,5 +1,13 @@
 (() => {
   const KEY='vyra-action-event-v2';
+  const readState=()=>{
+    try{
+      return JSON.parse(localStorage.getItem(KEY)||'{"actions":[],"events":[]}');
+    }catch(e){
+      console.warn('[VYRA] Ogiltig action-media state',e);
+      return {actions:[],events:[]};
+    }
+  };
   function db(){return new Promise((ok,no)=>{const r=indexedDB.open('vyra-action-media',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('files'))r.result.createObjectStore('files')};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
   async function store(file){if(!file)return null;const database=await db(),id='media-'+Date.now()+'-'+Math.random().toString(36).slice(2);await new Promise((ok,no)=>{const tx=database.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=ok;tx.onerror=()=>no(tx.error)});database.close();return{id,name:file.name,type:file.type,size:file.size}}
   function enhance(){
@@ -13,7 +21,7 @@
       if(!name||!types.length)return window.toast?.('Ange namn och välj minst en funktion');
       if(types.includes('picture')&&!picture)return window.toast?.('Välj en bild eller GIF');if(types.includes('video')&&!video)return window.toast?.('Välj en videofil');if(types.includes('audio')&&!audio)return window.toast?.('Välj en ljudfil');
       save.disabled=true;save.textContent='Sparar media...';
-      try{const state=JSON.parse(localStorage.getItem(KEY)||'{"actions":[],"events":[]}');state.actions.push({id:'a'+Date.now(),name,types,duration:+modal.querySelector('#aeDuration').value,cooldown:+modal.querySelector('#aeCooldown').value,volume:+modal.querySelector('#aeVolume').value,fade:modal.querySelector('#aeFade').checked,repeatCombo:modal.querySelector('#aeRepeatCombo').checked,pictureMedia:await store(picture),videoMedia:await store(video),audioMedia:await store(audio)});localStorage.setItem(KEY,JSON.stringify(state));modal.remove();window.toast?.('Action och media sparades');document.querySelector('[data-extra=actions]')?.click()}
+      try{const state=readState();state.actions.push({id:'a'+Date.now(),name,types,duration:+modal.querySelector('#aeDuration').value,cooldown:+modal.querySelector('#aeCooldown').value,volume:+modal.querySelector('#aeVolume').value,fade:modal.querySelector('#aeFade').checked,repeatCombo:modal.querySelector('#aeRepeatCombo').checked,pictureMedia:await store(picture),videoMedia:await store(video),audioMedia:await store(audio)});localStorage.setItem(KEY,JSON.stringify(state));modal.remove();window.toast?.('Action och media sparades');document.querySelector('[data-extra=actions]')?.click()}
       catch(error){save.disabled=false;save.textContent='Spara Action';window.toast?.('Filen kunde inte sparas')}
     };
     update();

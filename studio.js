@@ -1,2 +1,132 @@
-const $=s=>document.querySelector(s),state=JSON.parse(localStorage.getItem('vyra-state')||'{}');state.user??='Streamer';state.tiktok??='';state.widgets??=[{id:'goal',type:'goal',x:55,y:80,title:'KVÄLLENS MÅL',value:'74 320 / 100K'},{id:'alert',type:'alert',x:65,y:300,title:'@alex skickade Galaxy',value:'×5'},{id:'leader',type:'leader',x:50,y:480,title:'TOP GIFTERS',value:'1. Alex · 15.5K'}];state.flows??=[{trigger:'Gåva mottagen',action:'Visa gift alert',on:true},{trigger:'Ny följare',action:'Spela ljud + TTS',on:true}];state.canvasFormat??='portrait';const save=()=>localStorage.setItem('vyra-state',JSON.stringify(state));let view='home',selected=null,timer;function toast(t){$('.toast').textContent=t;$('.toast').classList.add('show');clearTimeout(timer);timer=setTimeout(()=>$('.toast').classList.remove('show'),1700)}function chart(){return `<svg viewBox="0 0 700 220" preserveAspectRatio="none"><path d="M0 190 C80 185 100 120 170 145 S260 80 320 110 S410 140 470 68 S570 90 700 25" fill="none" stroke="#876bff" stroke-width="3"/></svg>`}function rows(){return [['◆','alex','Galaxy ×5','nu'],['♥','sara','1 000 likes','1 min'],['＋','leo','Ny följare','2 min']].map(x=>`<div class="event-row"><i>${x[0]}</i><span><b>@${x[1]}</b><small>${x[2]}</small></span><time>${x[3]}</time></div>`).join('')}function home(){return `<div class="stats">${[['TITTARE','1 284'],['LIKES','84 730'],['GÅVOR','2 406'],['INTÄKT','3 842 kr']].map(x=>`<article class="card stat"><small>${x[0]}</small><strong>${x[1]}</strong><em>+18.4% mot förra liven</em></article>`).join('')}</div><div class="home-grid"><article class="card chart-card"><div class="card-head"><h2>Live-engagemang</h2><span>90 minuter</span></div>${chart()}</article><article class="card activity"><div class="card-head"><h2>Senaste events</h2></div>${rows()}</article><article class="card quick"><button data-go="editor"><b>◫ Skapa overlay</b><span>Öppna editorn →</span></button><button data-go="flows"><b>⌁ Ny automation</b><span>Koppla event →</span></button><button id="testGift"><b>◇ Skicka testgåva</b><span>Visa i overlay →</span></button></article></div>`}function wh(w){if(!w.title&&!w.type)console.warn('[VYRA] Widget saknar både title och type - se widgetobjektet och stacken nedan för att hitta var den skapades:',JSON.parse(JSON.stringify(w)),new Error().stack);return `<div class="widget ${w.type}${selected===w.id?' selected':''}" data-id="${w.id}" style="left:${w.x}px;top:${w.y}px"><b>${w.title??w.type??'Widget'}</b><span>${w.value??''}</span>${w.type==='goal'?'<div class="bar"><i></i></div>':''}</div>`}function props(){let w=state.widgets.find(x=>x.id===selected);return w?`<h3>${w.type}</h3><label>Rubrik<input id="pt" value="${w.title??''}"></label><label>Värde<input id="pv" value="${w.value??''}"></label><button class="delete" id="del">Ta bort</button>`:'<p>Välj ett element på canvas.</p>'}function canvasDims(format){return format==='landscape'?[768,432]:[432,768]}
-function editor(){return `<div class="editor-shell"><div class="elements"><div class="panel-title">ELEMENT</div>${[['goal','▰','Mål'],['alert','◇','Gift alert'],['leader','♛','Topplista'],['chat','▢','Chatt']].map(x=>`<button data-add="${x[0]}"><i>${x[1]}</i><span><b>${x[2]}</b><small>Drag & drop</small></span></button>`).join('')}</div><div class="workarea"><div class="editor-toolbar"><button id="testEvent">▶ Testevent</button><div class="canvas-format-toggle"><button data-format="portrait" class="${state.canvasFormat!=='landscape'?'active':''}">📱 Mobilform <small>9:16</small></button><button data-format="landscape" class="${state.canvasFormat==='landscape'?'active':''}">🖥 Datorform <small>16:9</small></button></div><button id="saveProject">Spara overlay först</button></div><div class="canvas${state.canvasFormat==='landscape'?' landscape':''}">${state.widgets.map(wh).join('')}</div></div><div class="properties"><div class="panel-title">EGENSKAPER</div>${props()}</div></div>`}function flows(){return `<div class="flow-head"><h2>Automationer</h2><button class="primary" id="newFlow">＋ Ny automation</button></div><div class="flows">${state.flows.map((f,i)=>`<article class="card flow-row"><div class="node"><b>◇ ${f.trigger}</b><small>TRIGGER</small></div><div class="arrow">→</div><div class="node"><b>▶ ${f.action}</b><small>ACTION</small></div><button data-toggle="${i}">${f.on?'Aktiv':'Pausad'}</button></article>`).join('')}</div>`}function events(){return `<article class="card" style="padding:20px"><h2>Eventhistorik</h2><table class="events-table"><tr><th>TID</th><th>ANVÄNDARE</th><th>EVENT</th><th>STATUS</th></tr>${[['21:42','@alex','Galaxy ×5'],['21:41','@sara','1 000 likes'],['21:40','@leo','Ny följare']].map(x=>`<tr>${x.map(y=>`<td>${y}</td>`).join('')}<td><span class="pill">Bearbetad</span></td></tr>`).join('')}</table></article>`}function analytics(){return `<div class="analytics-grid"><article class="card big-chart"><h2>Tillväxt senaste 30 dagarna</h2>${chart()}</article><article class="card rank"><h2>Top supporters</h2><ol><li>Alex <b>15.5K</b></li><li>Mia <b>12.2K</b></li><li>Leo <b>8.9K</b></li></ol></article></div>`}function settings(){return `<article class="card settings-page"><h2>Kontoinställningar</h2><label>Visningsnamn<input id="dn" value="${state.user}"></label><label>TikTok<input value="${state.tiktok||'Inte anslutet'}" disabled></label><button class="primary" id="ss">Spara</button></article>`}function render(){let m={home,editor,flows,events,analytics,settings};$('#view').innerHTML=m[view]();$('#title').textContent=view==='home'?`God kväll, ${state.user}`:view[0].toUpperCase()+view.slice(1);bind()}function go(v){view=v;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));render()}function send(){localStorage.setItem('vyra-event',JSON.stringify({user:'alex',gift:'Galaxy',count:5,time:Date.now()}));toast('Testgåva skickad')}function bind(){document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));$('#testGift')&&($('#testGift').onclick=send);if(view==='editor'){document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{let t=b.dataset.add,id=t+Date.now();state.widgets.push({id,type:t,x:100,y:200,title:'NYTT '+t.toUpperCase(),value:'Testvärde'});selected=id;save();render()});document.querySelectorAll('.widget').forEach(el=>{el.onclick=()=>{selected=el.dataset.id;render()};let s;el.onpointerdown=e=>{s={x:e.clientX,y:e.clientY,l:parseInt(el.style.left),t:parseInt(el.style.top)};el.setPointerCapture(e.pointerId)};el.onpointermove=e=>{if(s){el.style.left=s.l+e.clientX-s.x+'px';el.style.top=s.t+e.clientY-s.y+'px'}};el.onpointerup=()=>{if(s){let w=state.widgets.find(x=>x.id===el.dataset.id);w.x=parseInt(el.style.left);w.y=parseInt(el.style.top);save();s=null}}});let w=state.widgets.find(x=>x.id===selected);if(w){$('#pt').onchange=e=>{w.title=e.target.value;save();render()};$('#pv').onchange=e=>{w.value=e.target.value;save();render()};$('#del').onclick=()=>{state.widgets=state.widgets.filter(x=>x.id!==selected);selected=null;save();render()}}$('#testEvent').onclick=send;$('#saveProject').onclick=()=>{save();toast('Overlay sparad. Nu kan du kopiera länken till OBS eller TikTok.')};document.querySelectorAll('[data-format]').forEach(b=>b.onclick=()=>{let next=b.dataset.format;if(state.canvasFormat===next)return;let[oldW,oldH]=canvasDims(state.canvasFormat),[newW,newH]=canvasDims(next);state.widgets.forEach(w=>{w.x=Math.round(w.x/oldW*newW);w.y=Math.round(w.y/oldH*newH)});state.canvasFormat=next;save();render();toast(next==='landscape'?'Datorform (16:9)':'Mobilform (9:16)')})}if(view==='flows'){document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>{state.flows[+b.dataset.toggle].on=!state.flows[+b.dataset.toggle].on;save();render()});$('#newFlow').onclick=()=>{state.flows.push({trigger:'Chatt !hype',action:'Visa animation',on:true});save();render()}}if(view==='settings')$('#ss').onclick=()=>{state.user=$('#dn').value;save();$('#userName').textContent=state.user;render();toast('Sparat')}}document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>go(b.dataset.view));$('.connect').onclick=()=>$('#connectModal').showModal();$('.x').onclick=()=>$('#connectModal').close();$('#connectNow').onclick=()=>{state.tiktok=$('#tikUser').value||'@demo';save();$('.connection').classList.add('connected');$('.connection span').textContent=state.tiktok;$('#connectModal').close()};$('#openOverlay').onclick=()=>window.open('overlay.html');$('#userName').textContent=state.user;render();
+const $=s=>document.querySelector(s);
+function safeParseStorage(key,fallback){try{let raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch(e){console.warn('[VYRA] Ogiltig localStorage för',key,e);return fallback}}
+function getEditorCanvasScale(){
+  let canvas=document.querySelector('.canvas');
+  if(!canvas)return 1;
+  let transform=canvas.style.transform||getComputedStyle(canvas).transform||'';
+  let match=transform.match(/scale\(([\d.]+)\)/);
+  let scale=match?parseFloat(match[1]):1;
+  return Number.isFinite(scale)&&scale>0?scale:1;
+}
+const state=safeParseStorage('vyra-state',{});
+state.user??='Streamer';state.tiktok??='';state.widgets??=[{id:'goal',type:'goal',x:55,y:80,title:'KVÄLLENS MÅL',value:'74 320 / 100K'},{id:'alert',type:'alert',x:65,y:300,title:'@alex skickade Galaxy',value:'×5'},{id:'leader',type:'leader',x:50,y:480,title:'TOP GIFTERS',value:'1. Alex · 15.5K'}];state.flows??=[{trigger:'Gåva mottagen',action:'Visa gåvoalert',on:true},{trigger:'Ny följare',action:'Spela ljud + TTS',on:true}];
+const save=()=>localStorage.setItem('vyra-state',JSON.stringify(state));let view='home',selected=null,timer;
+function toast(t){$('.toast').textContent=t;$('.toast').classList.add('show');clearTimeout(timer);timer=setTimeout(()=>$('.toast').classList.remove('show'),1700)}
+function chart(){return `<svg viewBox="0 0 700 220" preserveAspectRatio="none"><path d="M0 190 C80 185 100 120 170 145 S260 80 320 110 S410 140 470 68 S570 90 700 25" fill="none" stroke="#876bff" stroke-width="3"/></svg>`}
+function rows(){return [['◆','alex','Galaxy ×5','nu'],['♥','sara','1 000 likes','1 min'],['＋','leo','Ny följare','2 min']].map(x=>`<div class="event-row"><i>${x[0]}</i><span><b>@${x[1]}</b><small>${x[2]}</small></span><time>${x[3]}</time></div>`).join('')}
+function home(){return `<div class="stats">${[['TITTARE','1 284'],['LIKES','84 730'],['GÅVOR','2 406'],['INTÄKT','3 842 kr']].map(x=>`<article class="card stat"><small>${x[0]}</small><strong>${x[1]}</strong><em>+18.4% mot förra liven</em></article>`).join('')}</div><div class="home-grid"><article class="card chart-card"><div class="card-head"><h2>Live-engagemang</h2><span>90 minuter</span></div>${chart()}</article><article class="card activity"><div class="card-head"><h2>Senaste händelser</h2></div>${rows()}</article><article class="card quick"><button data-go="editor"><b>◫ Skapa overlay</b><span>Öppna editorn →</span></button><button data-go="flows"><b>⌁ Ny automation</b><span>Koppla händelser →</span></button><button id="testGift"><b>◇ Skicka gåva</b><span>Visa i overlay →</span></button><button id="downloadVyra"><b>↓ Ladda ner VYRA</b><span>Installera skrivbordsappen →</span></button></article></div>`}
+function wh(w){if(!w.title&&!w.type)console.warn('[VYRA] Widget saknar både title och type - se widgetobjektet och stacken nedan för att hitta var den skapades:',JSON.parse(JSON.stringify(w)),new Error().stack);return `<div class="widget ${w.type}${selected===w.id?' selected':''}" data-id="${w.id}" style="left:${w.x}px;top:${w.y}px"><b>${w.title??w.type??'Widget'}</b><span>${w.value??''}</span>${w.type==='goal'?'<div class="bar"><i></i></div>':''}</div>`}
+function formatWidgetLabel(w){return (w.title||w.templateTitle||w.group||w.type||'Widget').toString()}
+function formatWidgetMeta(w){return (w.group||w.type||'Widget').toString().replace(/([a-z])([A-Z])/g,'$1 $2')}
+function layerItemMarkup(w,i){return `<div class="layer-item${selected===w.id?' active':''}${w.hidden?' is-hidden':''}"><button class="layer-item-main" type="button" data-select-widget="${w.id}"><i>${i+1}</i><span><b>${formatWidgetLabel(w)}</b><small>${formatWidgetMeta(w)}</small></span><em>${w.hidden?'Dold':'Live'}</em></button><div class="layer-item-actions"><button class="layer-action icon-only" type="button" data-toggle-widget="${w.id}" title="${w.hidden?'Visa widget':'Dölj widget'}" aria-label="${w.hidden?'Visa widget':'Dölj widget'}">${w.hidden?'◌':'◐'}</button><button class="layer-action icon-only delete" type="button" data-delete-widget="${w.id}" title="Ta bort widget" aria-label="Ta bort widget">×</button></div></div>`}
+function layerList(){return state.widgets.length?state.widgets.slice().sort((a,b)=>(b.layer||1)-(a.layer||1)).map((w,i)=>layerItemMarkup(w,i)).join(''):'<div class="editor-layer-empty">Inga widgets på scenen ännu. Lägg till första objektet för att börja.</div>'}
+function props(){let w=state.widgets.find(x=>x.id===selected);return w?`<h3>${w.type}</h3><label>Rubrik<input id="pt" value="${w.title??''}"></label><label>Värde<input id="pv" value="${w.value??''}"></label><button class="delete" id="del">Ta bort</button>`:'<div class="properties-empty"><strong>Välj en widget</strong><span>Klicka på en widget i vänsterlistan eller direkt på scenen för att redigera layout, färg och animation.</span></div>'}
+function editor(){let currentWidget=state.widgets.find(x=>x.id===selected);return `<div class="editor-shell"><div class="elements"><div class="elements-panel"><div class="elements-head"><div><small class="panel-kicker">Overlay</small><div class="panel-title">Live-lager</div></div><button class="elements-add" data-open-overlay title="Öppna overlay">＋</button></div><div class="catalog-notice elements-note"><b>Enkel byggyta</b><span>Välj en widget, justera till höger och håll scenen ren i mitten.</span></div><input class="widget-search" placeholder="Filter"><div class="editor-layer-list">${layerList()}</div><div class="elements-actions"><button data-open-overlay>＋ Add item</button></div><div class="widget-catalog"></div></div></div><div class="workarea"><div class="stage-topbar"><div class="stage-topbar-format"></div><div class="stage-topbar-center"></div><div class="stage-topbar-actions"></div></div><div class="stage-shell"><div class="stage-rail stage-rail-left"></div><div class="canvas-wrap"><div class="stage-caption"><span>Mobilskärm</span><b>1080 × 1920</b></div><div class="canvas-frame"><div class="canvas">${state.widgets.map(wh).join('')}</div></div></div><div class="stage-rail stage-rail-right"></div></div></div><div class="properties"><div class="properties-head"><small class="panel-kicker">Inspector</small><div class="panel-title">${currentWidget?formatWidgetLabel(currentWidget):'Välj widget'}</div><p>${currentWidget?'Redigera vald widget med en egen panel som använder hela ytan för just den här widgeten.':'Välj en widget på scenen för att öppna dess egna inställningar.'}</p></div><div class="properties-body">${props()}</div></div></div>`}
+function flows(){return `<div class="flow-head"><h2>Automationer</h2><button class="primary" id="newFlow">＋ Ny automation</button></div><div class="flows">${state.flows.map((f,i)=>`<article class="card flow-row"><div class="node"><b>◇ ${f.trigger}</b><small>TRIGGER</small></div><div class="arrow">→</div><div class="node"><b>▶ ${f.action}</b><small>ACTION</small></div><button data-toggle="${i}">${f.on?'Aktiv':'Pausad'}</button></article>`).join('')}</div>`}
+function events(){return `<article class="card" style="padding:20px"><h2>Händelsehistorik</h2><table class="events-table"><tr><th>TID</th><th>ANVÄNDARE</th><th>HÄNDELSE</th><th>STATUS</th></tr>${[['21:42','@alex','Galaxy ×5'],['21:41','@sara','1 000 likes'],['21:40','@leo','Ny följare']].map(x=>`<tr>${x.map(y=>`<td>${y}</td>`).join('')}<td><span class="pill">Bearbetad</span></td></tr>`).join('')}</table></article>`}
+function analytics(){return `<div class="analytics-grid"><article class="card big-chart"><h2>Tillväxt senaste 30 dagarna</h2>${chart()}</article><article class="card rank"><h2>Toppsupportrar</h2><ol><li>Alex <b>15.5K</b></li><li>Mia <b>12.2K</b></li><li>Leo <b>8.9K</b></li></ol></article></div>`}
+function settings(){return `<article class="card settings-page"><h2>Kontoinställningar</h2><label>Visningsnamn<input id="dn" value="${state.user}"></label><label>TikTok<input value="${state.tiktok||'Inte anslutet'}" disabled></label><button class="primary" id="ss">Spara</button></article>`}
+function render(){let m={home,editor,flows,events,analytics,settings};if(!m[view])view='home';let viewRoot=$('#view'),titleRoot=$('#title');if(!viewRoot||!titleRoot)return;viewRoot.innerHTML=m[view]();titleRoot.textContent=view==='home'?`God kväll, ${state.user}`:view[0].toUpperCase()+view.slice(1);bind()}
+function go(v){if(!v)return;view=v;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));render()}
+function send(){localStorage.setItem('vyra-event',JSON.stringify({user:'alex',gift:'Galaxy',count:5,time:Date.now()}));toast('Gåva skickad till overlayn')}
+function downloadVyra(){let link=document.createElement('a');link.href='VYRA-Setup.exe';link.setAttribute('download','');document.body.append(link);link.click();link.remove();toast('Nedladdningen har startat — dubbelklicka på VYRA-Setup.exe för att komma igång')}
+function bind(){
+  document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+  $('#testGift')&&($('#testGift').onclick=send);
+  $('#downloadVyra')&&($('#downloadVyra').onclick=downloadVyra);
+  if(view==='editor'){
+    document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{
+      let t=b.dataset.add,id=t+Date.now();
+      state.widgets.push({id,type:t,x:100,y:200,title:'NYTT '+t.toUpperCase(),value:'Standardvärde'});
+      selected=id;
+      save();
+      render();
+    });
+    document.querySelectorAll('[data-select-widget]').forEach(b=>b.onclick=()=>{
+      selected=b.dataset.selectWidget;
+      render();
+    });
+    document.querySelectorAll('[data-toggle-widget]').forEach(b=>b.onclick=e=>{
+      e.stopPropagation();
+      let w=state.widgets.find(x=>x.id===b.dataset.toggleWidget);
+      if(!w)return;
+      w.hidden=!w.hidden;
+      save();
+      toast(w.hidden?'Widget dold':'Widget synlig');
+      render();
+    });
+    document.querySelectorAll('[data-delete-widget]').forEach(b=>b.onclick=e=>{
+      e.stopPropagation();
+      let id=b.dataset.deleteWidget;
+      state.widgets=state.widgets.filter(x=>x.id!==id);
+      if(selected===id)selected=null;
+      save();
+      toast('Widget borttagen');
+      render();
+    });
+    document.querySelectorAll('[data-open-overlay]').forEach(b=>b.onclick=()=>go('overlay'));
+    document.querySelectorAll('.widget').forEach(el=>{
+      let suppressClick=false;
+      el.onclick=()=>{
+        if(suppressClick){
+          suppressClick=false;
+          return;
+        }
+        selected=el.dataset.id;
+        render();
+      };
+      let s;
+      el.onpointerdown=e=>{
+        e.preventDefault();
+        s={pointerId:e.pointerId,x:e.clientX,y:e.clientY,l:parseInt(el.style.left),t:parseInt(el.style.top),scale:getEditorCanvasScale(),moved:false};
+        el.setPointerCapture(e.pointerId);
+      };
+      el.onpointermove=e=>{
+        if(s&&e.pointerId===s.pointerId){
+          let nextLeft=s.l+(e.clientX-s.x)/s.scale;
+          let nextTop=s.t+(e.clientY-s.y)/s.scale;
+          if(Math.abs(nextLeft-s.l)>.5||Math.abs(nextTop-s.t)>.5)s.moved=true;
+          el.style.left=Math.round(nextLeft)+'px';
+          el.style.top=Math.round(nextTop)+'px';
+        }
+      };
+      let finishDrag=e=>{
+        if(s&&(!e||e.pointerId===s.pointerId)){
+          let w=state.widgets.find(x=>x.id===el.dataset.id);
+          if(!w){
+            s=null;
+            return;
+          }
+          suppressClick=s.moved;
+          w.x=parseInt(el.style.left);
+          w.y=parseInt(el.style.top);
+          save();
+          if(e&&el.hasPointerCapture?.(e.pointerId))el.releasePointerCapture(e.pointerId);
+          s=null;
+        }
+      };
+      el.onpointerup=finishDrag;
+      el.onpointercancel=finishDrag;
+    });
+    let w=state.widgets.find(x=>x.id===selected);
+    if(w){
+      $('#pt')&&($('#pt').onchange=e=>{w.title=e.target.value;save();render()});
+      $('#pv')&&($('#pv').onchange=e=>{w.value=e.target.value;save();render()});
+      $('#del')&&($('#del').onclick=()=>{state.widgets=state.widgets.filter(x=>x.id!==selected);selected=null;save();render()});
+    }
+    $('#testEvent')&&($('#testEvent').onclick=send);
+    $('#saveProject')&&($('#saveProject').onclick=()=>{save();toast('Projekt sparat')});
+  }
+  if(view==='flows'){
+    document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>{state.flows[+b.dataset.toggle].on=!state.flows[+b.dataset.toggle].on;save();render()});
+    $('#newFlow').onclick=()=>{state.flows.push({trigger:'Chatt !hype',action:'Visa animation',on:true});save();render()};
+  }
+  if(view==='settings')$('#ss').onclick=()=>{state.user=$('#dn').value;save();$('#userName').textContent=state.user;render();toast('Sparat')};
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>go(b.dataset.view));
+$('.connect')&&($('.connect').onclick=()=>$('#connectModal')?.showModal());
+$('.x')&&($('.x').onclick=()=>$('#connectModal')?.close());
+$('#connectNow')&&($('#connectNow').onclick=()=>{state.tiktok=$('#tikUser')?.value?.trim()||'Ansluten lokalt';save();$('.connection')?.classList.add('connected');let status=$('.connection span');if(status)status.textContent=state.tiktok;$('#connectModal')?.close()});
+$('#openOverlay')&&($('#openOverlay').onclick=()=>window.open('overlay.html'));
+$('#userName')&&($('#userName').textContent=state.user);
+render();

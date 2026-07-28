@@ -17,7 +17,13 @@
 }
 
 .gifter-orbit .pro-avatar-frame {
-  position: relative; width: 86px; height: 86px; z-index: 3; display: grid; place-items: center;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
 }
 
 /* !important + these longer, widget-scoped selectors are required to beat an existing UNSCOPED rule in
@@ -39,6 +45,12 @@
 .fan-profile .pro-avatar-frame > .pro-frame-art,
 .gifter-orbit .pro-avatar-frame > .pro-frame-art {
   position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: contain !important; z-index: 2 !important; pointer-events: none !important;
+}
+
+.gifter-orbit .pro-avatar-frame > .pro-frame-art {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .gaf-frame-group .pro-frame-picker { margin-top: 4px; }

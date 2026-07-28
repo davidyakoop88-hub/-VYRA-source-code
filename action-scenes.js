@@ -1,6 +1,6 @@
 (() => {
   const KEY = 'vyra-action-event-v2';
-  const getState = () => JSON.parse(localStorage.getItem(KEY) || '{"actions":[],"events":[]}');
+  const getState = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{"actions":[],"events":[]}'); } catch (e) { console.warn('[VYRA] Ogiltig action-state', e); return { actions: [], events: [] }; } };
   const sceneUrl = number => `${location.origin}${location.pathname}?overlay=1&scene=${number}`;
 
   function addSceneSettings() {
@@ -35,6 +35,11 @@
     updateSceneStatuses();
   }
 
+  function ensureScenesRendered() {
+    if (!document.querySelector('[data-extra=actions]')?.classList.contains('active')) return;
+    setTimeout(renderScenes, 0);
+  }
+
   function updateSceneStatuses() {
     document.querySelectorAll('[data-scene-status]').forEach(status => {
       const lastSeen=Number(localStorage.getItem(`vyra-scene-heartbeat-${status.dataset.sceneStatus}`)||0);
@@ -67,6 +72,12 @@
     const heartbeat=()=>localStorage.setItem(heartbeatKey,String(Date.now()));
     heartbeat();setInterval(heartbeat,2000);
     addEventListener('beforeunload',()=>localStorage.removeItem(heartbeatKey));
+  }
+  ensureScenesRendered();
+  const viewRoot = document.querySelector('#view');
+  if (viewRoot && !viewRoot.dataset.aeSceneObserver) {
+    viewRoot.dataset.aeSceneObserver = '1';
+    new MutationObserver(() => ensureScenesRendered()).observe(viewRoot, { childList: true });
   }
   setInterval(updateSceneStatuses,2000);
   addEventListener('storage',event=>{if(event.key?.startsWith('vyra-scene-heartbeat-'))updateSceneStatuses()});

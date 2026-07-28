@@ -1,5 +1,8 @@
 .tools/
 node_modules/
+*.blend
+*.blend1
+*.mov
 vyra-state-backup.json
 VYRA-Download.zip
 VYRA-Setup.exe
@@ -9,3 +12,4 @@ electron-app/dist/
 electron-app/dist2/
 electron-app/dist3/
 electron-app/dist4/
+electron-app/dist-build*/
